@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync, writeFileSync, copyFileSync, existsSync, statSync } from 'fs';
+import { readFileSync, readdirSync, writeFileSync, copyFileSync, existsSync, mkdirSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, basename } from 'path';
 import { homedir } from 'os';
@@ -203,15 +203,19 @@ const includeCount = countModules(includeDir);
 const rbxtsCount = countModules(nodeModulesRbxtsDir);
 console.log(`Built studio-plugin/${variant.outputName} (${moduleCount} modules${includeCount > 0 ? `, ${includeCount} runtime includes` : ''}${rbxtsCount > 0 ? `, ${rbxtsCount} @rbxts packages` : ''})`);
 
-const pluginsDir = process.platform === 'win32'
-  ? join(process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local'), 'Roblox', 'Plugins')
-  : join(homedir(), 'Documents', 'Roblox', 'Plugins');
-if (existsSync(pluginsDir)) {
-  try {
-    const installPath = join(pluginsDir, variant.outputName);
-    copyFileSync(outputPath, installPath);
-    console.log(`Installed to ${installPath}`);
-  } catch (err) {
-    console.warn(`Could not copy to plugins folder: ${err.message}`);
+function resolvePluginsDir() {
+  switch (process.platform) {
+    case 'win32':
+      return join(process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local'), 'Roblox', 'Plugins');
+    case 'darwin':
+      return join(homedir(), 'Documents', 'Roblox', 'Plugins');
+    default:
+      throw new Error(`Unsupported platform for plugin install: ${process.platform}`);
   }
 }
+
+const pluginsDir = resolvePluginsDir();
+mkdirSync(pluginsDir, { recursive: true });
+const installPath = join(pluginsDir, variant.outputName);
+copyFileSync(outputPath, installPath);
+console.log(`Installed to ${installPath}`);
