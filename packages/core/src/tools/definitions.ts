@@ -805,7 +805,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   // === Playtest ===
   {
     name: 'start_playtest',
-    category: 'read',
+    category: 'write',
     description: 'Start playtest. Captures print/warn/error via LogService. Poll with get_playtest_output, end with stop_playtest. Use numPlayers for multi-client testing (server + N clients).',
     inputSchema: {
       type: 'object',
@@ -825,7 +825,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'stop_playtest',
-    category: 'read',
+    category: 'write',
     description: 'Stop playtest and return all captured output.',
     inputSchema: {
       type: 'object',

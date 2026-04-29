@@ -78,7 +78,9 @@ function massSetProperty(requestData: Record<string, unknown>) {
 		const instance = getInstanceByPath(path);
 		if (instance) {
 			const [success, err] = pcall(() => {
-				(instance as unknown as Record<string, unknown>)[propertyName] = propertyValue;
+				const converted = convertPropertyValue(instance, propertyName, propertyValue);
+				(instance as unknown as Record<string, unknown>)[propertyName] =
+					converted !== undefined ? converted : propertyValue;
 			});
 			if (success) {
 				successCount++;

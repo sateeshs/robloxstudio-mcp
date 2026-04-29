@@ -1848,6 +1848,7 @@ local function massCreateObjects(requestData)
 		local className = objData.className
 		local parentPath = objData.parent
 		local name = objData.name
+		local properties = (objData.properties) or {}
 		local parentInstance = getInstanceByPath(parentPath)
 		if not parentInstance then
 			return {
@@ -1860,6 +1861,12 @@ local function massCreateObjects(requestData)
 			local instance = Instance.new(className)
 			if name ~= "" and name then
 				instance.Name = name
+			end
+			for propertyName, propertyValue in pairs(properties) do
+				pcall(function()
+					local converted = convertPropertyValue(instance, propertyName, propertyValue)
+					instance[propertyName] = if converted ~= nil then converted else propertyValue
+				end)
 			end
 			instance.Parent = parentInstance
 			return instance
@@ -2823,7 +2830,8 @@ local function massSetProperty(requestData)
 		local instance = getInstanceByPath(path)
 		if instance then
 			local success, err = pcall(function()
-				instance[propertyName] = propertyValue
+				local converted = convertPropertyValue(instance, propertyName, propertyValue)
+				instance[propertyName] = if converted ~= nil then converted else propertyValue
 			end)
 			if success then
 				successCount += 1
@@ -5055,7 +5063,7 @@ return {
         <Properties>
           <string name="Name">State</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local CURRENT_VERSION = "2.7.0-next.6"
+local CURRENT_VERSION = "2.7.0"
 local MAX_CONNECTIONS = 5
 local BASE_PORT = 58741
 local activeTabIndex = 0
