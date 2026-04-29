@@ -48,6 +48,8 @@ const routeMap: Record<string, Handler> = {
 	"/api/mass-get-property": PropertyHandlers.massGetProperty,
 	"/api/create-object": InstanceHandlers.createObject,
 	"/api/mass-create-objects": InstanceHandlers.massCreateObjects,
+	// Back-compat alias: pre-2.7.0 servers split this endpoint when properties were present.
+	"/api/mass-create-objects-with-properties": InstanceHandlers.massCreateObjects,
 	"/api/delete-object": InstanceHandlers.deleteObject,
 	"/api/smart-duplicate": InstanceHandlers.smartDuplicate,
 	"/api/mass-duplicate": InstanceHandlers.massDuplicate,

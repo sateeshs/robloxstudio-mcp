@@ -88,6 +88,7 @@ local routeMap = {
 	["/api/mass-get-property"] = PropertyHandlers.massGetProperty,
 	["/api/create-object"] = InstanceHandlers.createObject,
 	["/api/mass-create-objects"] = InstanceHandlers.massCreateObjects,
+	["/api/mass-create-objects-with-properties"] = InstanceHandlers.massCreateObjects,
 	["/api/delete-object"] = InstanceHandlers.deleteObject,
 	["/api/smart-duplicate"] = InstanceHandlers.smartDuplicate,
 	["/api/mass-duplicate"] = InstanceHandlers.massDuplicate,
