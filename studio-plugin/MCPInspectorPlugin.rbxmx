@@ -2,7 +2,7 @@
 <roblox version="4">
   <Item class="Script" referent="0">
     <Properties>
-      <string name="Name">MCPPlugin</string>
+      <string name="Name">MCPInspectorPlugin</string>
       <token name="RunContext">0</token>
       <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(script.include.RuntimeLib)
@@ -11,8 +11,8 @@ local UI = TS.import(script, script, "modules", "UI")
 local Communication = TS.import(script, script, "modules", "Communication")
 UI.init(plugin)
 local elements = UI.getElements()
-local toolbar = plugin:CreateToolbar("MCP Integration")
-local button = toolbar:CreateButton("MCP Server", "Connect to MCP Server for AI Integration", "rbxassetid://10734944444")
+local toolbar = plugin:CreateToolbar("MCP Inspector")
+local button = toolbar:CreateButton("MCP Inspector", "Connect to MCP Inspector (read-only) for AI Integration", "rbxassetid://125921838360800")
 elements.connectButton.Activated:Connect(function()
 	local conn = State.getActiveConnection()
 	if conn and conn.isActive then

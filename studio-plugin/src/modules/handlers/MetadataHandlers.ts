@@ -53,32 +53,6 @@ function deserializeValue(attributeValue: unknown, valueType?: string): unknown 
 	return attributeValue;
 }
 
-function getAttribute(requestData: Record<string, unknown>) {
-	const instancePath = requestData.instancePath as string;
-	const attributeName = requestData.attributeName as string;
-
-	if (!instancePath || !attributeName) {
-		return { error: "Instance path and attribute name are required" };
-	}
-
-	const instance = getInstanceByPath(instancePath);
-	if (!instance) return { error: `Instance not found: ${instancePath}` };
-
-	const [success, result] = pcall(() => {
-		const value = instance.GetAttribute(attributeName);
-		return {
-			instancePath,
-			attributeName,
-			value: serializeValue(value),
-			valueType: typeOf(value),
-			exists: value !== undefined,
-		};
-	});
-
-	if (success) return result;
-	return { error: `Failed to get attribute: ${result}` };
-}
-
 function setAttribute(requestData: Record<string, unknown>) {
 	const instancePath = requestData.instancePath as string;
 	const attributeName = requestData.attributeName as string;
@@ -402,7 +376,6 @@ function bulkSetAttributes(requestData: Record<string, unknown>) {
 }
 
 export = {
-	getAttribute,
 	setAttribute,
 	getAttributes,
 	deleteAttribute,

@@ -19,9 +19,9 @@ interface StreamableHttpConfig {
   tools: ToolDefinition[];
 }
 
-type ToolHandler = (tools: RobloxStudioTools, body: any) => Promise<any>;
+export type ToolHandler = (tools: RobloxStudioTools, body: any) => Promise<any>;
 
-const TOOL_HANDLERS: Record<string, ToolHandler> = {
+export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   get_file_tree: (tools, body) => tools.getFileTree(body.path),
   search_files: (tools, body) => tools.searchFiles(body.query, body.searchType),
   get_place_info: (tools) => tools.getPlaceInfo(),
@@ -37,7 +37,6 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   mass_set_property: (tools, body) => tools.massSetProperty(body.paths, body.propertyName, body.propertyValue),
   mass_get_property: (tools, body) => tools.massGetProperty(body.paths, body.propertyName),
   create_object: (tools, body) => tools.createObject(body.className, body.parent, body.name, body.properties),
-  create_ui_tree: (tools, body) => tools.createUITree(body.parentPath, body.tree),
   mass_create_objects: (tools, body) => tools.massCreateObjects(body.objects),
   delete_object: (tools, body) => tools.deleteObject(body.instancePath),
   smart_duplicate: (tools, body) => tools.smartDuplicate(body.instancePath, body.count, body.options),
@@ -54,10 +53,9 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   }),
   get_script_source: (tools, body) => tools.getScriptSource(body.instancePath, body.startLine, body.endLine),
   set_script_source: (tools, body) => tools.setScriptSource(body.instancePath, body.source),
-  edit_script_lines: (tools, body) => tools.editScriptLines(body.instancePath, body.old_string, body.new_string),
+  edit_script_lines: (tools, body) => tools.editScriptLines(body.instancePath, body.old_string, body.new_string, body.startLine),
   insert_script_lines: (tools, body) => tools.insertScriptLines(body.instancePath, body.afterLine, body.newContent),
   delete_script_lines: (tools, body) => tools.deleteScriptLines(body.instancePath, body.startLine, body.endLine),
-  get_attribute: (tools, body) => tools.getAttribute(body.instancePath, body.attributeName),
   set_attribute: (tools, body) => tools.setAttribute(body.instancePath, body.attributeName, body.attributeValue, body.valueType),
   get_attributes: (tools, body) => tools.getAttributes(body.instancePath),
   delete_attribute: (tools, body) => tools.deleteAttribute(body.instancePath, body.attributeName),
@@ -86,13 +84,11 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   get_asset_thumbnail: (tools, body) => tools.getAssetThumbnail(body.assetId, body.size),
   insert_asset: (tools, body) => tools.insertAsset(body.assetId, body.parentPath, body.position),
   preview_asset: (tools, body) => tools.previewAsset(body.assetId, body.includeProperties, body.maxDepth),
+  upload_asset: (tools, body) => tools.uploadAsset(body.filePath, body.assetType, body.displayName, body.description, body.userId, body.groupId),
   clone_object: (tools, body) => tools.cloneObject(body.instancePath, body.targetParentPath),
-  move_object: (tools, body) => tools.moveObject(body.instancePath, body.targetParentPath),
-  rename_object: (tools, body) => tools.renameObject(body.instancePath, body.newName),
   get_descendants: (tools, body) => tools.getDescendants(body.instancePath, body.maxDepth, body.classFilter),
   compare_instances: (tools, body) => tools.compareInstances(body.instancePathA, body.instancePathB),
   get_output_log: (tools, body) => tools.getOutputLog(body.maxEntries, body.messageType),
-  get_script_analysis: (tools, body) => tools.getScriptAnalysis(body.instancePath),
   bulk_set_attributes: (tools, body) => tools.bulkSetAttributes(body.instancePath, body.attributes),
   capture_screenshot: (tools) => tools.captureScreenshot(),
   simulate_mouse_input: (tools, body) => tools.simulateMouseInput(body.action, body.x, body.y, body.button, body.scrollDirection, body.target),

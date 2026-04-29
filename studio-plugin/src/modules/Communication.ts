@@ -47,13 +47,13 @@ const routeMap: Record<string, Handler> = {
 	"/api/mass-set-property": PropertyHandlers.massSetProperty,
 	"/api/mass-get-property": PropertyHandlers.massGetProperty,
 	"/api/create-object": InstanceHandlers.createObject,
-	"/api/create-ui-tree": InstanceHandlers.createUITree,
 	"/api/mass-create-objects": InstanceHandlers.massCreateObjects,
+	// Back-compat alias: pre-2.7.0 servers split this endpoint when properties were present.
+	"/api/mass-create-objects-with-properties": InstanceHandlers.massCreateObjects,
 	"/api/delete-object": InstanceHandlers.deleteObject,
 	"/api/smart-duplicate": InstanceHandlers.smartDuplicate,
 	"/api/mass-duplicate": InstanceHandlers.massDuplicate,
 	"/api/clone-object": InstanceHandlers.cloneObject,
-	"/api/move-object": InstanceHandlers.moveObject,
 
 	"/api/get-script-source": ScriptHandlers.getScriptSource,
 	"/api/set-script-source": ScriptHandlers.setScriptSource,
@@ -61,7 +61,6 @@ const routeMap: Record<string, Handler> = {
 	"/api/insert-script-lines": ScriptHandlers.insertScriptLines,
 	"/api/delete-script-lines": ScriptHandlers.deleteScriptLines,
 
-	"/api/get-attribute": MetadataHandlers.getAttribute,
 	"/api/set-attribute": MetadataHandlers.setAttribute,
 	"/api/get-attributes": MetadataHandlers.getAttributes,
 	"/api/delete-attribute": MetadataHandlers.deleteAttribute,
@@ -93,7 +92,6 @@ const routeMap: Record<string, Handler> = {
 	"/api/simulate-keyboard-input": InputHandlers.simulateKeyboardInput,
 
 	"/api/find-and-replace-in-scripts": ScriptHandlers.findAndReplaceInScripts,
-	"/api/get-script-analysis": ScriptHandlers.getScriptAnalysis,
 };
 
 function processRequest(request: RequestPayload): unknown {

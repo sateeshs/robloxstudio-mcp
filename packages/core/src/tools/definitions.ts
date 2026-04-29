@@ -302,36 +302,6 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     }
   },
   {
-    name: 'create_ui_tree',
-    category: 'write',
-    description: 'Create an entire instance hierarchy from a nested JSON tree in one call.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        parentPath: {
-          type: 'string',
-          description: 'Parent instance path'
-        },
-        tree: {
-          type: 'object',
-          description: 'Root node: { className: string, name?: string, properties?: { prop: value }, children?: [node, ...] }',
-          properties: {
-            className: { type: 'string', description: 'Roblox class name' },
-            name: { type: 'string', description: 'Instance name' },
-            properties: { type: 'object', description: 'Property name to value map' },
-            children: {
-              type: 'array',
-              description: 'Child nodes with same structure',
-              items: { type: 'object' }
-            }
-          },
-          required: ['className']
-        }
-      },
-      required: ['parentPath', 'tree']
-    }
-  },
-  {
     name: 'mass_create_objects',
     category: 'write',
     description: 'Create multiple instances. Each can have optional properties.',
@@ -547,7 +517,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'edit_script_lines',
     category: 'write',
-    description: 'Replace exact text in a script. old_string must match exactly once in the script (whitespace-sensitive). Use get_script_source first to see current content.',
+    description: 'Replace exact text in a script. Without startLine, old_string must match exactly once in the script. Pass startLine (1-indexed, from get_script_source) to anchor the edit to a specific line when old_string is ambiguous (e.g. repeated closing braces).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -557,11 +527,15 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
         old_string: {
           type: 'string',
-          description: 'Exact text to find and replace (must be unique in the script)'
+          description: 'Exact text to find and replace. Must be unique in the script unless startLine is provided.'
         },
         new_string: {
           type: 'string',
           description: 'Replacement text'
+        },
+        startLine: {
+          type: 'number',
+          description: 'Optional 1-indexed line where old_string begins. When provided, skips uniqueness check and requires old_string to match starting at that exact line.'
         }
       },
       required: ['instancePath', 'old_string', 'new_string']
@@ -615,25 +589,6 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 
   // === Attributes ===
-  {
-    name: 'get_attribute',
-    category: 'read',
-    description: 'Get an attribute value',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        instancePath: {
-          type: 'string',
-          description: 'Instance path (dot notation)'
-        },
-        attributeName: {
-          type: 'string',
-          description: 'Attribute name'
-        }
-      },
-      required: ['instancePath', 'attributeName']
-    }
-  },
   {
     name: 'set_attribute',
     category: 'write',
@@ -850,7 +805,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   // === Playtest ===
   {
     name: 'start_playtest',
-    category: 'read',
+    category: 'write',
     description: 'Start playtest. Captures print/warn/error via LogService. Poll with get_playtest_output, end with stop_playtest. Use numPlayers for multi-client testing (server + N clients).',
     inputSchema: {
       type: 'object',
@@ -870,7 +825,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'stop_playtest',
-    category: 'read',
+    category: 'write',
     description: 'Stop playtest and return all captured output.',
     inputSchema: {
       type: 'object',
@@ -1337,23 +1292,28 @@ part(0,2,0,2,1,1,"b")`,
     }
   },
   {
-    name: 'upload_decal',
+    name: 'upload_asset',
     category: 'write',
-    description: 'Upload an image file as a Decal asset to Roblox. Supports ROBLOSECURITY cookie auth (recommended, simpler) or ROBLOX_OPEN_CLOUD_API_KEY (needs asset:write scope + creator ID). Cookie auth is used automatically when ROBLOSECURITY is set.',
+    description: 'Upload any supported asset type to Roblox: Audio (mp3/ogg/wav/flac), Decal (png/jpg/bmp/tga), Model (fbx/gltf/glb/rbxm/rbxmx), Animation (rbxm/rbxmx), or Video (mp4/mov). Decal supports ROBLOSECURITY cookie auth or ROBLOX_OPEN_CLOUD_API_KEY. All other types require Open Cloud API key with asset:write scope + creator ID. Audio: max 7 min, 100 uploads/month (ID-verified). Video: max 5 min, requires 13+ ID-verified.',
     inputSchema: {
       type: 'object',
       properties: {
         filePath: {
           type: 'string',
-          description: 'Absolute path to the image file on disk (PNG, JPG, BMP, or TGA)'
+          description: 'Absolute path to the file on disk'
+        },
+        assetType: {
+          type: 'string',
+          enum: ['Audio', 'Decal', 'Model', 'Animation', 'Video'],
+          description: 'Type of asset to upload. Must match the file format.'
         },
         displayName: {
           type: 'string',
-          description: 'Display name for the decal asset (max 50 characters)'
+          description: 'Display name for the asset (max 50 characters)'
         },
         description: {
           type: 'string',
-          description: 'Description for the decal asset (default: empty string)'
+          description: 'Description for the asset (default: empty string)'
         },
         userId: {
           type: 'string',
@@ -1364,7 +1324,7 @@ part(0,2,0,2,1,1,"b")`,
           description: 'Roblox group ID for the asset creator. Overrides ROBLOX_CREATOR_GROUP_ID env var. Takes precedence over userId if both provided.'
         }
       },
-      required: ['filePath', 'displayName']
+      required: ['filePath', 'assetType', 'displayName']
     }
   },
   {
@@ -1498,45 +1458,6 @@ part(0,2,0,2,1,1,"b")`,
       required: ['instancePath', 'targetParentPath']
     }
   },
-  {
-    name: 'move_object',
-    category: 'write',
-    description: 'Move (reparent) an instance to a new parent location. Preserves all children and properties.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        instancePath: {
-          type: 'string',
-          description: 'Path of the instance to move'
-        },
-        targetParentPath: {
-          type: 'string',
-          description: 'Path of the new parent'
-        }
-      },
-      required: ['instancePath', 'targetParentPath']
-    }
-  },
-  {
-    name: 'rename_object',
-    category: 'write',
-    description: 'Rename an instance.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        instancePath: {
-          type: 'string',
-          description: 'Path of the instance to rename'
-        },
-        newName: {
-          type: 'string',
-          description: 'New name for the instance'
-        }
-      },
-      required: ['instancePath', 'newName']
-    }
-  },
-
   // === Descendants & Comparison ===
   {
     name: 'get_descendants',
@@ -1600,22 +1521,6 @@ part(0,2,0,2,1,1,"b")`,
       }
     }
   },
-  {
-    name: 'get_script_analysis',
-    category: 'read',
-    description: 'Run syntax analysis on Luau scripts using loadstring. Detects compile errors with line numbers. Pass a script path to analyze one script, or a container path to analyze all scripts under it.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        instancePath: {
-          type: 'string',
-          description: 'Instance path - either a script or a container whose descendant scripts will be analyzed'
-        }
-      },
-      required: ['instancePath']
-    }
-  },
-
   // === Bulk Attributes ===
   {
     name: 'bulk_set_attributes',

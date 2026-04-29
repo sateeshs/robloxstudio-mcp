@@ -275,21 +275,11 @@ export class RobloxStudioTools {
     };
   }
 
-  async createUITree(parentPath: string, tree: any) {
-    if (!parentPath || !tree) {
-      throw new Error('parentPath and tree are required for create_ui_tree');
-    }
-    const response = await this.client.request('/api/create-ui-tree', { parentPath, tree });
-    return { content: [{ type: 'text', text: JSON.stringify(response) }] };
-  }
-
   async massCreateObjects(objects: Array<{className: string, parent: string, name?: string, properties?: Record<string, any>}>) {
     if (!objects || objects.length === 0) {
       throw new Error('Objects array is required for mass_create_objects');
     }
-    const hasProperties = objects.some(o => o.properties && Object.keys(o.properties).length > 0);
-    const endpoint = hasProperties ? '/api/mass-create-objects-with-properties' : '/api/mass-create-objects';
-    const response = await this.client.request(endpoint, { objects });
+    const response = await this.client.request('/api/mass-create-objects', { objects });
     return {
       content: [
         {
@@ -457,11 +447,13 @@ export class RobloxStudioTools {
   }
 
 
-  async editScriptLines(instancePath: string, oldString: string, newString: string) {
+  async editScriptLines(instancePath: string, oldString: string, newString: string, startLine?: number) {
     if (!instancePath || typeof oldString !== 'string' || typeof newString !== 'string') {
       throw new Error('Instance path, old_string, and new_string are required for edit_script_lines');
     }
-    const response = await this.client.request('/api/edit-script-lines', { instancePath, old_string: oldString, new_string: newString });
+    const payload: Record<string, unknown> = { instancePath, old_string: oldString, new_string: newString };
+    if (startLine !== undefined) payload.startLine = startLine;
+    const response = await this.client.request('/api/edit-script-lines', payload);
     return {
       content: [
         {
@@ -523,21 +515,6 @@ export class RobloxStudioTools {
       pattern,
       ...options
     });
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response)
-        }
-      ]
-    };
-  }
-
-  async getAttribute(instancePath: string, attributeName: string) {
-    if (!instancePath || !attributeName) {
-      throw new Error('Instance path and attribute name are required for get_attribute');
-    }
-    const response = await this.client.request('/api/get-attribute', { instancePath, attributeName });
     return {
       content: [
         {
@@ -1472,8 +1449,34 @@ export class RobloxStudioTools {
     };
   }
 
-  async uploadDecal(
+  // Decal asset IDs are the wrapper asset; ImageLabel.Image needs the underlying image
+  // content ID. The only reliable cross-auth way to resolve this is InsertService:LoadAsset
+  // via the connected Studio plugin — the unauthenticated economy endpoint returns 401.
+  private async resolveImageId(decalAssetId: string): Promise<string | null> {
+    const code = `
+      local InsertService = game:GetService("InsertService")
+      local ok, result = pcall(function() return InsertService:LoadAsset(${decalAssetId}) end)
+      if not ok then return nil end
+      local decal = result:FindFirstChildWhichIsA("Decal", true)
+      local id = decal and decal.Texture:match("(%d+)") or nil
+      result:Destroy()
+      return id
+    `;
+    try {
+      const response = await this.client.request('/api/execute-luau', { code }, 'edit') as { returnValue?: unknown };
+      const returnValue = response?.returnValue;
+      if (returnValue !== undefined && returnValue !== null && /^\d+$/.test(String(returnValue))) {
+        return String(returnValue);
+      }
+    } catch {
+      // plugin not connected or luau execution failed
+    }
+    return null;
+  }
+
+  async uploadAsset(
     filePath: string,
+    assetType: string,
     displayName: string,
     description?: string,
     userId?: string,
@@ -1486,12 +1489,8 @@ export class RobloxStudioTools {
     const fileContent = fs.readFileSync(filePath);
     const fileName = path.basename(filePath);
 
-    if (this.cookieClient.hasCookie()) {
-      const result = await this.cookieClient.uploadDecal(
-        fileContent,
-        displayName,
-        description || ''
-      );
+    if (assetType === 'Decal' && this.cookieClient.hasCookie()) {
+      const result = await this.cookieClient.uploadDecal(fileContent, displayName, description || '');
       return {
         content: [{
           type: 'text',
@@ -1500,8 +1499,9 @@ export class RobloxStudioTools {
             response: {
               assetId: String(result.assetId),
               displayName,
-              assetType: 'Decal',
-              backingAssetId: String(result.backingAssetId),
+              assetType,
+              decalId: String(result.assetId),
+              imageId: String(result.backingAssetId),
             },
           })
         }]
@@ -1509,8 +1509,11 @@ export class RobloxStudioTools {
     }
 
     if (!this.openCloudClient.hasApiKey()) {
+      const cookieHint = assetType === 'Decal'
+        ? ' Alternatively, set ROBLOSECURITY to use cookie auth.'
+        : '';
       throw new Error(
-        'No auth configured for asset upload. Set ROBLOSECURITY env var (recommended) or ROBLOX_OPEN_CLOUD_API_KEY.'
+        `No auth configured for ${assetType} upload. Set ROBLOX_OPEN_CLOUD_API_KEY (needs asset:write scope).${cookieHint}`
       );
     }
 
@@ -1519,7 +1522,7 @@ export class RobloxStudioTools {
 
     if (!resolvedUserId && !resolvedGroupId) {
       throw new Error(
-        'Creator identity required for Open Cloud upload. Set ROBLOX_CREATOR_USER_ID or ROBLOX_CREATOR_GROUP_ID, or pass userId/groupId as parameters. Alternatively, set ROBLOSECURITY to use cookie auth instead.'
+        'Creator identity required for Open Cloud upload. Set ROBLOX_CREATOR_USER_ID or ROBLOX_CREATOR_GROUP_ID, or pass userId/groupId as parameters.'
       );
     }
 
@@ -1532,7 +1535,7 @@ export class RobloxStudioTools {
 
     const result = await this.openCloudClient.createAsset(
       {
-        assetType: 'Decal',
+        assetType: assetType as 'Audio' | 'Decal' | 'Model' | 'Animation' | 'Video',
         displayName,
         description: description || '',
         creationContext: { creator },
@@ -1540,6 +1543,22 @@ export class RobloxStudioTools {
       fileContent,
       fileName
     );
+
+    // Decals: also resolve the underlying image content ID for ImageLabel.Image usage.
+    if (assetType === 'Decal') {
+      const decalId = result.response?.assetId;
+      const imageId = decalId ? await this.resolveImageId(decalId) : null;
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            ...result,
+            decalId: decalId ?? null,
+            imageId,
+          })
+        }]
+      };
+    }
 
     return {
       content: [{
@@ -1602,26 +1621,6 @@ export class RobloxStudioTools {
     return { content: [{ type: 'text', text: JSON.stringify(response) }] };
   }
 
-  async moveObject(instancePath: string, targetParentPath: string) {
-    if (!instancePath || !targetParentPath) {
-      throw new Error('instancePath and targetParentPath are required for move_object');
-    }
-    const response = await this.client.request('/api/move-object', { instancePath, targetParentPath });
-    return { content: [{ type: 'text', text: JSON.stringify(response) }] };
-  }
-
-  async renameObject(instancePath: string, newName: string) {
-    if (!instancePath || !newName) {
-      throw new Error('instancePath and newName are required for rename_object');
-    }
-    const response = await this.client.request('/api/set-property', {
-      instancePath,
-      propertyName: 'Name',
-      propertyValue: newName,
-    });
-    return { content: [{ type: 'text', text: JSON.stringify(response) }] };
-  }
-
   async getDescendants(instancePath: string, maxDepth?: number, classFilter?: string) {
     if (!instancePath) {
       throw new Error('instancePath is required for get_descendants');
@@ -1640,14 +1639,6 @@ export class RobloxStudioTools {
 
   async getOutputLog(maxEntries?: number, messageType?: string) {
     const response = await this.client.request('/api/get-output-log', { maxEntries, messageType });
-    return { content: [{ type: 'text', text: JSON.stringify(response) }] };
-  }
-
-  async getScriptAnalysis(instancePath: string) {
-    if (!instancePath) {
-      throw new Error('instancePath is required for get_script_analysis');
-    }
-    const response = await this.client.request('/api/get-script-analysis', { instancePath });
     return { content: [{ type: 'text', text: JSON.stringify(response) }] };
   }
 
