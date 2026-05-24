@@ -284,6 +284,13 @@ function evaluateFormula(
 	}
 }
 
+function forEachDescendant(root: Instance, visit: (instance: Instance) => void): void {
+	visit(root);
+	for (const child of root.GetChildren()) {
+		forEachDescendant(child, visit);
+	}
+}
+
 function compareVersions(v1: string, v2: string): number {
 	function parseVersion(v: string): number[] {
 		const parts: number[] = [];
@@ -315,4 +322,5 @@ export = {
 	convertPropertyValue,
 	evaluateFormula,
 	compareVersions,
+	forEachDescendant,
 };

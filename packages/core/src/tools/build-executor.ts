@@ -24,7 +24,7 @@ function createSeededRng(seed: number): () => number {
   };
 }
 
-function computeBoundsFromParts(parts: any[][]): [number, number, number] {
+export function computeBoundsFromParts(parts: any[][]): [number, number, number] {
   let maxX = 0, maxY = 0, maxZ = 0;
   for (const p of parts) {
     const px = Math.abs(p[0]) + p[3] / 2;

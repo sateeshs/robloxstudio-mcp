@@ -1,6 +1,6 @@
 import { StudioHttpClient } from './studio-client.js';
 import { BridgeService } from '../bridge-service.js';
-import { runBuildExecutor } from './build-executor.js';
+import { runBuildExecutor, computeBoundsFromParts } from './build-executor.js';
 import { OpenCloudClient } from '../opencloud-client.js';
 import { RobloxCookieClient } from '../roblox-cookie-client.js';
 import { rgbaToPng } from '../png-encoder.js';
@@ -943,7 +943,7 @@ export class RobloxStudioTools {
     const normalizedParts = this.normalizeBuildParts(parts, new Set(Object.keys(normalizedPalette)));
 
     // Auto-compute bounds if not provided
-    const computedBounds = bounds || this.computeBounds(normalizedParts);
+    const computedBounds = bounds || computeBoundsFromParts(normalizedParts);
 
     const buildData = { id, style, bounds: computedBounds, palette: normalizedPalette, parts: normalizedParts };
 
@@ -971,23 +971,6 @@ export class RobloxStudioTools {
         }
       ]
     };
-  }
-
-  private computeBounds(parts: any[][]): [number, number, number] {
-    let maxX = 0, maxY = 0, maxZ = 0;
-    for (const p of parts) {
-      const px = Math.abs(p[0]) + p[3] / 2;
-      const py = Math.abs(p[1]) + p[4] / 2;
-      const pz = Math.abs(p[2]) + p[5] / 2;
-      maxX = Math.max(maxX, px);
-      maxY = Math.max(maxY, py);
-      maxZ = Math.max(maxZ, pz);
-    }
-    return [
-      Math.round(maxX * 2 * 10) / 10,
-      Math.round(maxY * 2 * 10) / 10,
-      Math.round(maxZ * 2 * 10) / 10
-    ];
   }
 
   async generateBuild(
@@ -1106,8 +1089,8 @@ export class RobloxStudioTools {
             bounds: data.bounds || [0, 0, 0],
             partCount: Array.isArray(data.parts) ? data.parts.length : 0
           });
-        } catch {
-          // Skip invalid JSON files
+        } catch (err) {
+          console.error(`Warning: skipping invalid library file ${file}: ${(err as Error).message}`);
         }
       }
     }
@@ -1468,8 +1451,8 @@ export class RobloxStudioTools {
       if (returnValue !== undefined && returnValue !== null && /^\d+$/.test(String(returnValue))) {
         return String(returnValue);
       }
-    } catch {
-      // plugin not connected or luau execution failed
+    } catch (err) {
+      console.error(`Warning: could not resolve decal image ID (plugin may be disconnected): ${(err as Error).message}`);
     }
     return null;
   }

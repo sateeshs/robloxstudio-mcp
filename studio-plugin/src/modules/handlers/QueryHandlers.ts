@@ -1,6 +1,6 @@
 import Utils from "../Utils";
 
-const { getInstancePath, getInstanceByPath, readScriptSource } = Utils;
+const { getInstancePath, getInstanceByPath, readScriptSource, forEachDescendant } = Utils;
 
 interface TreeNode {
 	name: string;
@@ -61,7 +61,7 @@ function searchFiles(requestData: Record<string, unknown>) {
 
 	const results: { name: string; className: string; path: string; hasSource: boolean; enabled?: boolean }[] = [];
 
-	function searchRecursive(instance: Instance) {
+	forEachDescendant(game, (instance) => {
 		let match = false;
 
 		if (searchType === "name") {
@@ -84,13 +84,7 @@ function searchFiles(requestData: Record<string, unknown>) {
 			}
 			results.push(entry);
 		}
-
-		for (const child of instance.GetChildren()) {
-			searchRecursive(child);
-		}
-	}
-
-	searchRecursive(game);
+	});
 
 	return { results, query, searchType, count: results.size() };
 }
@@ -158,7 +152,7 @@ function searchObjects(requestData: Record<string, unknown>) {
 
 	const results: { name: string; className: string; path: string }[] = [];
 
-	function searchRecursive(instance: Instance) {
+	forEachDescendant(game, (instance) => {
 		let match = false;
 
 		if (searchType === "name") {
@@ -179,13 +173,7 @@ function searchObjects(requestData: Record<string, unknown>) {
 				path: getInstancePath(instance),
 			});
 		}
-
-		for (const child of instance.GetChildren()) {
-			searchRecursive(child);
-		}
-	}
-
-	searchRecursive(game);
+	});
 
 	return { results, query, searchType, count: results.size() };
 }
@@ -336,7 +324,7 @@ function searchByProperty(requestData: Record<string, unknown>) {
 
 	const results: { name: string; className: string; path: string; propertyValue: string }[] = [];
 
-	function searchRecursive(instance: Instance) {
+	forEachDescendant(game, (instance) => {
 		const [success, value] = pcall(() => tostring((instance as unknown as Record<string, unknown>)[propertyName]));
 		if (success && (value as string).lower().find(propertyValue.lower())[0] !== undefined) {
 			results.push({
@@ -346,12 +334,8 @@ function searchByProperty(requestData: Record<string, unknown>) {
 				propertyValue: value as string,
 			});
 		}
-		for (const child of instance.GetChildren()) {
-			searchRecursive(child);
-		}
-	}
+	});
 
-	searchRecursive(game);
 	return { propertyName, propertyValue, results, count: results.size() };
 }
 
