@@ -1,3 +1,9 @@
+# Archiving project June 6th 2026
+
+Hey a few months ago my laptops motherboard was shorted which contained the hardware keys needed to get into my NPM account, due to Node customer support taking forever and also other priorities taking place for me, I will be **archiving** this project.
+
+I recommend you swap to https://github.com/Chrrxs/robloxstudio-mcp which is a fork of this one that's being actively maintained by Chrrxs.
+
 # Roblox Studio MCP Server
 
 **Connect AI assistants like Claude and Gemini to Roblox Studio**
