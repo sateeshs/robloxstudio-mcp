@@ -104,6 +104,11 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   }),
 };
 
+/** Register additional tool handlers (used by environment-tools package). */
+export function registerExtraHandlers(handlers: Record<string, ToolHandler>): void {
+  Object.assign(TOOL_HANDLERS, handlers);
+}
+
 export function createHttpServer(tools: RobloxStudioTools, bridge: BridgeService, allowedTools?: Set<string>, serverConfig?: StreamableHttpConfig) {
   const app = express();
   let mcpServerActive = false;

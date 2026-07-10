@@ -658,6 +658,21 @@ export class RobloxStudioTools {
     };
   }
 
+  async executeTemplate(luauSource: string, opId: string) {
+    if (!luauSource) {
+      throw new Error('luauSource is required for execute_template');
+    }
+    const response = await this.client.request('/api/execute-template', { luauSource, opId }, 'edit');
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response)
+        }
+      ]
+    };
+  }
+
   async startPlaytest(mode: string, numPlayers?: number) {
     if (mode !== 'play' && mode !== 'run') {
       throw new Error('mode must be "play" or "run"');

@@ -1589,5 +1589,12 @@ part(0,2,0,2,1,1,"b")`,
   },
 ];
 
-export const getReadOnlyTools = () => TOOL_DEFINITIONS.filter(t => t.category === 'read');
-export const getAllTools = () => [...TOOL_DEFINITIONS];
+/** Append additional tool definitions (used by environment-tools package). */
+let _extraTools: ToolDefinition[] = [];
+export function registerExtraTools(tools: ToolDefinition[]): void {
+  _extraTools = tools;
+}
+
+export const getReadOnlyTools = () =>
+  [...TOOL_DEFINITIONS, ..._extraTools].filter(t => t.category === 'read');
+export const getAllTools = () => [...TOOL_DEFINITIONS, ..._extraTools];
