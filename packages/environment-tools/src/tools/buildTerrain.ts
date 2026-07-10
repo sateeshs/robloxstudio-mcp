@@ -47,8 +47,21 @@ export function prepareBuildTerrain(rawInput: unknown): BuildTerrainResult {
       material: FLAT_MATERIAL_MAP[spec.biome] ?? 'Grass',
       opId: opId,
     };
-  } else if (spec.biome === 'forest') {
-    templateName = 'terrain_biome_forest.luau';
+  } else {
+    // All noise-based biomes share the same param shape
+    const biomeTemplateMap: Record<string, string> = {
+      forest: 'terrain_biome_forest.luau',
+      desert: 'terrain_biome_desert.luau',
+      snow: 'terrain_biome_snow.luau',
+      island: 'terrain_biome_island.luau',
+      plains: 'terrain_biome_plains.luau',
+      mountains: 'terrain_biome_mountains.luau',
+    };
+    const tmpl = biomeTemplateMap[spec.biome];
+    if (!tmpl) {
+      throw new Error(`Biome "${spec.biome}" is not supported. Available: flat, forest, desert, snow, island, plains, mountains`);
+    }
+    templateName = tmpl;
     params = {
       originX: spec.origin.x,
       originY: spec.origin.y,
@@ -60,8 +73,6 @@ export function prepareBuildTerrain(rawInput: unknown): BuildTerrainResult {
       seed: spec.seed ?? Math.floor(Math.random() * 100000),
       opId: opId,
     };
-  } else {
-    throw new Error(`Biome "${spec.biome}" is not yet implemented. Available: flat, forest`);
   }
 
   const luauSource = renderTemplate(templateName, params);
