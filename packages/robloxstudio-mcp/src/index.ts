@@ -1,5 +1,10 @@
-import { RobloxStudioMCPServer, getAllTools } from '@robloxstudio-mcp/core';
+import { RobloxStudioMCPServer, getAllTools, registerExtraTools, registerExtraHandlers } from '@robloxstudio-mcp/core';
+import { ENV_TOOL_DEFINITIONS, ENV_TOOL_HANDLERS } from '@robloxstudio-mcp/environment-tools/register';
 import { createRequire } from 'module';
+
+// Register environment tools before getAllTools() is called
+registerExtraTools(ENV_TOOL_DEFINITIONS);
+registerExtraHandlers(ENV_TOOL_HANDLERS);
 
 if (process.argv.includes('--install-plugin')) {
   const { installPlugin } = await import('./install-plugin.js');

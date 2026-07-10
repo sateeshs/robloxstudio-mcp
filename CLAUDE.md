@@ -53,9 +53,8 @@ recording. Full diagram and data flow: PLAN.md §1.
 - Telemetry log (do not commit): logs/scenes.jsonl
 
 ## Current status
-- **M0 (Orientation)**: IN PROGRESS — docs/NOTES.md created with upstream
-  code review notes. Remaining: verify GenerationService API, document plugin
-  build procedure, check bridge payload size limits.
+- **M0 (Orientation)**: COMPLETE — see docs/NOTES.md for all findings
+  (plugin build procedure, bridge limits, screenshot tool, GenerationService API).
 - **M1–M5**: NOT STARTED — packages/environment-tools/ does not exist yet.
 - Upstream tool registration pattern: see `TOOL_HANDLERS` map in
   packages/core/src/http-server.ts and `TOOL_DEFINITIONS` in

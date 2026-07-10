@@ -12,6 +12,7 @@ import BuildHandlers from "./handlers/BuildHandlers";
 import AssetHandlers from "./handlers/AssetHandlers";
 import CaptureHandlers from "./handlers/CaptureHandlers";
 import InputHandlers from "./handlers/InputHandlers";
+import EnvironmentHandlers from "./handlers/EnvironmentHandlers";
 import { Connection, RequestPayload, PollResponse, ReadyResponse } from "../types";
 
 const instanceId = HttpService.GenerateGUID(false);
@@ -92,6 +93,9 @@ const routeMap: Record<string, Handler> = {
 	"/api/simulate-keyboard-input": InputHandlers.simulateKeyboardInput,
 
 	"/api/find-and-replace-in-scripts": ScriptHandlers.findAndReplaceInScripts,
+
+	// Environment tools
+	"/api/execute-template": EnvironmentHandlers.executeTemplate,
 };
 
 function processRequest(request: RequestPayload): unknown {

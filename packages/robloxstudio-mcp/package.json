@@ -43,6 +43,7 @@
     "ws": "^8.14.2"
   },
   "devDependencies": {
-    "@robloxstudio-mcp/core": "*"
+    "@robloxstudio-mcp/core": "*",
+    "@robloxstudio-mcp/environment-tools": "*"
   }
 }
