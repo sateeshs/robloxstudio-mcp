@@ -10,6 +10,7 @@ import { prepareScatterObjects } from './tools/scatterObjects.js';
 import { prepareBuildStructure } from './tools/buildStructure.js';
 import { prepareSnapshotScene } from './tools/snapshotScene.js';
 import { prepareGenerateAsset } from './tools/generateAsset.js';
+import { prepareComposeScene, executeComposeScene } from './tools/composeScene.js';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -191,6 +192,47 @@ const _handlers: Record<string, EnvToolHandler> = {
       summary: result.ok
         ? 'Environment cleared — all EnvTools-tagged instances removed.'
         : `Clear failed: ${result.error}`,
+    });
+  },
+
+  compose_scene: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { spec, warnings, sceneId } = prepareComposeScene(body);
+
+    // Execute each step by delegating to the existing individual handlers
+    const { steps, allOk } = await executeComposeScene(spec, sceneId, async (toolName, toolBody) => {
+      try {
+        const handler = _handlers[toolName];
+        if (!handler) {
+          return { ok: false, error: `Unknown tool: ${toolName}` };
+        }
+        const response = await handler(tools, toolBody);
+        const parsed = JSON.parse(response.content[0].text);
+        return {
+          ok: parsed.ok ?? true,
+          opId: parsed.opId as string | undefined,
+          error: parsed.ok ? undefined : (parsed.error as string | undefined),
+        };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    });
+
+    const succeeded = steps.filter(s => s.ok).length;
+    const failed = steps.filter(s => !s.ok).length;
+    const totalMs = steps.reduce((sum, s) => sum + s.durationMs, 0);
+
+    return textContent({
+      ok: allOk,
+      sceneId,
+      warnings,
+      steps,
+      summary: allOk
+        ? `Scene composed successfully (${succeeded} steps, ${totalMs}ms). Use clear_environment to remove.`
+        : `Scene partially composed: ${succeeded} succeeded, ${failed} failed (${totalMs}ms).`,
     });
   },
 };

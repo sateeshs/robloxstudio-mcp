@@ -7,11 +7,13 @@ export { prepareScatterObjects } from './tools/scatterObjects.js';
 export { prepareBuildStructure } from './tools/buildStructure.js';
 export { prepareSnapshotScene } from './tools/snapshotScene.js';
 export { prepareGenerateAsset } from './tools/generateAsset.js';
+export { prepareComposeScene, executeComposeScene } from './tools/composeScene.js';
 export { validateTerrainSpec, TerrainSpecSchema } from './schema/terrainSpec.js';
 export { validateMoodSpec, MoodSpecSchema } from './schema/moodSpec.js';
 export { validateScatterSpec, ScatterSpecSchema } from './schema/scatterSpec.js';
 export { validateStructureSpec, StructureSpecSchema } from './schema/structureSpec.js';
 export { validateAssetSpec, AssetSpecSchema } from './schema/assetSpec.js';
+export { validateSceneSpec, SceneSpecSchema } from './schema/sceneSpec.js';
 export { ClearSpecSchema } from './schema/clearSpec.js';
 export { renderTemplate, renderTemplateString, sanitizeString, formatValue, setTemplatesDir } from './luau/render.js';
 
@@ -325,6 +327,63 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
         confirm: {
           type: 'boolean',
           description: 'Must be true to confirm clearing',
+        },
+      },
+    },
+  },
+  {
+    name: 'compose_scene',
+    category: 'write',
+    description: [
+      'Build a complete scene from a single SceneSpec — sequences terrain, mood,',
+      'structures, scatters, and assets in the correct order.',
+      'Each step runs independently; partial failures are reported per-step.',
+      '',
+      'Order: terrain → mood → structures → scatters → assets.',
+      'Use this instead of calling individual tools when you want a full scene.',
+      '',
+      'Examples:',
+      '  {"terrain": {"biome": "forest", "size": {"x": 512, "z": 512}, "water": true}, "mood": {"preset": "sunset"}}',
+      '  {"terrain": {"biome": "snow"}, "mood": {"preset": "night"}, "structures": [{"template": "tower", "position": {"x": 0, "y": 0, "z": 0}, "material": "ice"}], "scatters": [{"source": {"kind": "template", "name": "snowman"}, "count": 10, "area": {"origin": {"x": 0, "y": 0, "z": 0}, "size": {"x": 200, "z": 200}}}]}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        terrain: {
+          type: 'object',
+          description: 'Terrain specification (see build_terrain)',
+          properties: {
+            biome: { type: 'string', enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains'] },
+            size: { type: 'object', properties: { x: { type: 'number' }, z: { type: 'number' } } },
+            heightVariation: { type: 'string', enum: ['flat', 'gentle', 'hilly', 'mountainous'] },
+            water: { type: 'boolean' },
+            seed: { type: 'number' },
+            origin: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+          },
+        },
+        mood: {
+          type: 'object',
+          description: 'Mood/lighting specification (see set_mood)',
+          properties: {
+            preset: { type: 'string', enum: ['morning', 'noon', 'sunset', 'night', 'spooky', 'underwater', 'alien'] },
+            fogDensity: { type: 'number' },
+            overrides: { type: 'object' },
+          },
+        },
+        structures: {
+          type: 'array',
+          description: 'Array of structure specs (max 20, see build_structure)',
+          items: { type: 'object' },
+        },
+        scatters: {
+          type: 'array',
+          description: 'Array of scatter specs (max 10, see scatter_objects)',
+          items: { type: 'object' },
+        },
+        assets: {
+          type: 'array',
+          description: 'Array of asset generation specs (max 5, see generate_asset)',
+          items: { type: 'object' },
         },
       },
     },
