@@ -12,6 +12,8 @@ import { prepareSnapshotScene } from './tools/snapshotScene.js';
 import { prepareGenerateAsset } from './tools/generateAsset.js';
 import { prepareComposeScene, executeComposeScene } from './tools/composeScene.js';
 import { prepareSculptTerrain } from './tools/sculptTerrain.js';
+import { prepareConfigureWater } from './tools/configureWater.js';
+import { prepareSetMaterialColors } from './tools/setMaterialColors.js';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -248,6 +250,34 @@ const _handlers: Record<string, EnvToolHandler> = {
       summary: result.ok
         ? `Terrain sculpted (opId: ${opId}). Use clear_environment to remove markers.`
         : `Sculpt failed: ${result.error}`,
+    });
+  },
+
+  configure_water: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareConfigureWater(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Water configured (opId: ${opId}).`
+        : `Water configuration failed: ${result.error}`,
+    });
+  },
+
+  set_material_colors: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareSetMaterialColors(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Material colors set (opId: ${opId}).`
+        : `Material color set failed: ${result.error}`,
     });
   },
 };

@@ -16,6 +16,10 @@ export { validateStructureSpec, StructureSpecSchema } from './schema/structureSp
 export { validateAssetSpec, AssetSpecSchema } from './schema/assetSpec.js';
 export { validateSceneSpec, SceneSpecSchema } from './schema/sceneSpec.js';
 export { validateSculptSpec, SculptSpecSchema } from './schema/sculptSpec.js';
+export { validateWaterSpec, WaterSpecSchema } from './schema/waterSpec.js';
+export { validateMaterialColorSpec, MaterialColorSpecSchema } from './schema/materialColorSpec.js';
+export { prepareConfigureWater } from './tools/configureWater.js';
+export { prepareSetMaterialColors } from './tools/setMaterialColors.js';
 export { ClearSpecSchema } from './schema/clearSpec.js';
 export { renderTemplate, renderTemplateString, sanitizeString, formatValue, setTemplatesDir } from './luau/render.js';
 
@@ -455,6 +459,71 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
         strength: {
           type: 'number',
           description: 'Smoothing strength 0-1 (default: 0.5, for smooth operation)',
+        },
+      },
+    },
+  },
+  {
+    name: 'configure_water',
+    category: 'write',
+    description: [
+      'Configure terrain water properties (color, transparency, reflectance, waves).',
+      'Modifies the Terrain instance water settings in one operation.',
+      '',
+      'Examples:',
+      '  {"color": "#1E90FF", "transparency": 0.5}',
+      '  {"waveSize": 0.3, "waveSpeed": 20}',
+      '  {"color": "#00CED1", "transparency": 0.2, "reflectance": 0.8, "waveSize": 0.1, "waveSpeed": 5}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        color: {
+          type: 'string',
+          description: 'Water color as hex #RRGGBB (optional, keeps current if omitted)',
+        },
+        transparency: {
+          type: 'number',
+          description: 'Water transparency 0-1 (default: 0.3)',
+        },
+        reflectance: {
+          type: 'number',
+          description: 'Water reflectance 0-1 (default: 1)',
+        },
+        waveSize: {
+          type: 'number',
+          description: 'Wave size 0-1 (default: 0.15)',
+        },
+        waveSpeed: {
+          type: 'number',
+          description: 'Wave speed 0-100 (default: 10)',
+        },
+      },
+    },
+  },
+  {
+    name: 'set_material_colors',
+    category: 'write',
+    description: [
+      'Override terrain material colors for custom palettes.',
+      'Changes the display color of terrain materials without affecting geometry.',
+      '',
+      'Available materials: Grass, Sand, Rock, Snow, Ice, Mud, Ground, Sandstone,',
+      'Slate, LeafyGrass, Basalt, CrackedLava, Limestone, Salt, WoodPlanks,',
+      'Concrete, Brick, Cobblestone, Asphalt, Glacier, Pavement, SmoothPlastic.',
+      '',
+      'Examples:',
+      '  {"colors": {"Grass": "#2E8B57", "Rock": "#696969"}}',
+      '  {"colors": {"Sand": "#F4A460", "Sandstone": "#DAA520", "Ground": "#8B4513"}}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      required: ['colors'],
+      properties: {
+        colors: {
+          type: 'object',
+          description: 'Map of material name to hex color #RRGGBB',
+          additionalProperties: { type: 'string' },
         },
       },
     },

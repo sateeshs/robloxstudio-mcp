@@ -10,6 +10,8 @@
     "clear_environment",
     "compose_scene",
     "sculpt_terrain",
+    "configure_water",
+    "set_material_colors",
     "get_file_tree",
     "search_files",
     "get_place_info",
