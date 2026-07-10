@@ -11,7 +11,29 @@ import { prepareBuildStructure } from './tools/buildStructure.js';
 import { prepareSnapshotScene } from './tools/snapshotScene.js';
 import { prepareGenerateAsset } from './tools/generateAsset.js';
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 import type { RobloxStudioTools } from '@robloxstudio-mcp/core';
+
+/** Append a telemetry entry to logs/scenes.jsonl (best-effort, never throws) */
+function logTelemetry(entry: {
+  tool: string;
+  inputSpec: Record<string, unknown>;
+  ok: boolean;
+  durationMs: number;
+  error?: string;
+  opId?: string;
+}): void {
+  try {
+    const logDir = path.resolve(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    const line = JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n';
+    fs.appendFileSync(path.join(logDir, 'scenes.jsonl'), line);
+  } catch {
+    // Telemetry is best-effort; never block tool execution
+  }
+}
 
 export interface EnvToolHandler {
   (tools: RobloxStudioTools, body: Record<string, unknown>): Promise<{
@@ -46,7 +68,36 @@ function textContent(data: Record<string, unknown>): { content: Array<{ type: st
   return { content: [{ type: 'text', text: JSON.stringify(data) }] };
 }
 
-export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = {
+/** Wrap a handler with telemetry logging */
+function withTelemetry(toolName: string, handler: EnvToolHandler): EnvToolHandler {
+  return async (tools, body) => {
+    const start = Date.now();
+    try {
+      const result = await handler(tools, body);
+      const parsed = JSON.parse(result.content[0].text);
+      logTelemetry({
+        tool: toolName,
+        inputSpec: body,
+        ok: parsed.ok ?? true,
+        durationMs: Date.now() - start,
+        opId: parsed.opId,
+        error: parsed.ok ? undefined : parsed.error,
+      });
+      return result;
+    } catch (err) {
+      logTelemetry({
+        tool: toolName,
+        inputSpec: body,
+        ok: false,
+        durationMs: Date.now() - start,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  };
+}
+
+const _handlers: Record<string, EnvToolHandler> = {
   build_terrain: async (tools, body) => {
     checkPluginCapability(tools);
     const { luauSource, opId, warnings } = prepareBuildTerrain(body);
@@ -143,5 +194,10 @@ export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = {
     });
   },
 };
+
+// Wrap all handlers with telemetry
+export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = Object.fromEntries(
+  Object.entries(_handlers).map(([name, handler]) => [name, withTelemetry(name, handler)])
+);
 
 export { ENV_TOOL_DEFINITIONS };
