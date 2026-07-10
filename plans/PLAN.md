@@ -325,7 +325,7 @@ has not been created, and GenerationService API has not been verified.
 
 | Milestone | Status |
 |-----------|--------|
-| M0 — Orientation | NOT STARTED |
+| M0 — Orientation | COMPLETE — see docs/NOTES.md |
 | M1 — Skeleton + first tool | NOT STARTED |
 | M2 — Core toolset | NOT STARTED |
 | M3 — Cube asset generation | NOT STARTED |
