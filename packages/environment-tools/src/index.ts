@@ -20,6 +20,8 @@ export { validateWaterSpec, WaterSpecSchema } from './schema/waterSpec.js';
 export { validateMaterialColorSpec, MaterialColorSpecSchema } from './schema/materialColorSpec.js';
 export { prepareConfigureWater } from './tools/configureWater.js';
 export { prepareSetMaterialColors } from './tools/setMaterialColors.js';
+export { prepareAddEffect } from './tools/addEffect.js';
+export { validateEffectSpec, EffectSpecSchema } from './schema/effectSpec.js';
 export { ClearSpecSchema } from './schema/clearSpec.js';
 export { renderTemplate, renderTemplateString, sanitizeString, formatValue, setTemplatesDir } from './luau/render.js';
 
@@ -552,6 +554,81 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'object',
           description: 'Map of material name to hex color #RRGGBB',
           additionalProperties: { type: 'string' },
+        },
+      },
+    },
+  },
+  {
+    name: 'add_effect',
+    category: 'write',
+    description: [
+      'Add visual effects, lights, or ambient sounds to the scene.',
+      'Creates particle effects, dynamic lights, explosions, or spatial audio.',
+      '',
+      'Particle effects: fire, smoke, sparkles, rain, snow, magic, dust, embers.',
+      'Lights: torch_light, spotlight, neon_glow, campfire_light.',
+      'Physics: explosion.',
+      'Ambient sounds: ambient_fire, ambient_wind, ambient_water, ambient_rain,',
+      '  ambient_birds, ambient_cave, ambient_music.',
+      '',
+      'Examples:',
+      '  {"effect": "fire", "position": {"x": 0, "y": 5, "z": 0}, "size": 3}',
+      '  {"effect": "rain", "position": {"x": 0, "y": 0, "z": 0}, "radius": 100, "intensity": 0.8}',
+      '  {"effect": "campfire_light", "position": {"x": 10, "y": 1, "z": 10}}',
+      '  {"effect": "magic", "position": {"x": 0, "y": 3, "z": 0}, "color": "#8050FF"}',
+      '  {"effect": "ambient_birds", "position": {"x": 0, "y": 10, "z": 0}, "radius": 50}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      required: ['effect'],
+      properties: {
+        effect: {
+          type: 'string',
+          enum: [
+            'fire', 'smoke', 'sparkles', 'rain', 'snow', 'magic', 'dust', 'embers',
+            'torch_light', 'spotlight', 'neon_glow', 'campfire_light',
+            'explosion',
+            'ambient_fire', 'ambient_wind', 'ambient_water', 'ambient_rain',
+            'ambient_birds', 'ambient_cave', 'ambient_music',
+          ],
+          description: 'Effect type to add',
+        },
+        position: {
+          type: 'object',
+          description: 'World position for the effect (default: 0,5,0)',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+        },
+        color: {
+          type: 'string',
+          description: 'Custom color as hex #RRGGBB (optional, uses preset default)',
+        },
+        size: {
+          type: 'number',
+          description: 'Effect scale 0.1-50 (default: 3)',
+        },
+        intensity: {
+          type: 'number',
+          description: 'Effect intensity 0-1 (default: 0.7)',
+        },
+        radius: {
+          type: 'number',
+          description: 'Light/sound range in studs 1-200 (default: 20)',
+        },
+        enabled: {
+          type: 'boolean',
+          description: 'Start enabled (default: true)',
+        },
+        looped: {
+          type: 'boolean',
+          description: 'Loop sound effects (default: true)',
+        },
+        name: {
+          type: 'string',
+          description: 'Custom name for the effect instance',
         },
       },
     },

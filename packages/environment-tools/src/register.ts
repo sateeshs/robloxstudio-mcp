@@ -14,6 +14,7 @@ import { prepareComposeScene, executeComposeScene } from './tools/composeScene.j
 import { prepareSculptTerrain } from './tools/sculptTerrain.js';
 import { prepareConfigureWater } from './tools/configureWater.js';
 import { prepareSetMaterialColors } from './tools/setMaterialColors.js';
+import { prepareAddEffect } from './tools/addEffect.js';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -278,6 +279,20 @@ const _handlers: Record<string, EnvToolHandler> = {
       summary: result.ok
         ? `Material colors set (opId: ${opId}).`
         : `Material color set failed: ${result.error}`,
+    });
+  },
+
+  add_effect: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareAddEffect(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Effect added (opId: ${opId}). Use clear_environment to remove.`
+        : `Effect failed: ${result.error}`,
     });
   },
 };
