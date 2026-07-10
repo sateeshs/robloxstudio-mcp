@@ -3,6 +3,7 @@ import { ClearSpecSchema } from '../src/schema/clearSpec.js';
 import { validateMoodSpec, MoodSpecSchema } from '../src/schema/moodSpec.js';
 import { validateScatterSpec, ScatterSpecSchema } from '../src/schema/scatterSpec.js';
 import { validateStructureSpec, StructureSpecSchema } from '../src/schema/structureSpec.js';
+import { validateAssetSpec, AssetSpecSchema } from '../src/schema/assetSpec.js';
 
 describe('TerrainSpecSchema', () => {
   test('parses valid flat terrain with defaults', () => {
@@ -321,6 +322,65 @@ describe('validateStructureSpec', () => {
       template: 'tower',
       position: { x: 0, y: 0, z: 0 },
     });
+    expect(warnings).toHaveLength(0);
+  });
+});
+
+describe('AssetSpecSchema', () => {
+  test('parses valid prompt with defaults', () => {
+    const result = AssetSpecSchema.parse({ prompt: 'a small wizard tower' });
+    expect(result.prompt).toBe('a small wizard tower');
+    expect(result.predefinedSchema).toBe('Body1');
+    expect(result.position).toEqual({ x: 0, y: 0, z: 0 });
+    expect(result.anchorToTerrain).toBe(false);
+  });
+
+  test('parses with all options', () => {
+    const result = AssetSpecSchema.parse({
+      prompt: 'red sports car',
+      predefinedSchema: 'Car5',
+      boundingBox: { x: 10, y: 4, z: 5 },
+      position: { x: 50, y: 0, z: 50 },
+      anchorToTerrain: true,
+      name: 'MyCar',
+    });
+    expect(result.predefinedSchema).toBe('Car5');
+    expect(result.boundingBox).toEqual({ x: 10, y: 4, z: 5 });
+    expect(result.anchorToTerrain).toBe(true);
+    expect(result.name).toBe('MyCar');
+  });
+
+  test('rejects empty prompt', () => {
+    expect(() => AssetSpecSchema.parse({ prompt: '' })).toThrow();
+  });
+
+  test('rejects prompt over 200 characters', () => {
+    const longPrompt = 'a'.repeat(201);
+    expect(() => AssetSpecSchema.parse({ prompt: longPrompt })).toThrow();
+  });
+
+  test('accepts prompt at exactly 200 characters', () => {
+    const maxPrompt = 'a'.repeat(200);
+    const result = AssetSpecSchema.parse({ prompt: maxPrompt });
+    expect(result.prompt).toHaveLength(200);
+  });
+
+  test('rejects invalid predefinedSchema', () => {
+    expect(() => AssetSpecSchema.parse({
+      prompt: 'test',
+      predefinedSchema: 'InvalidSchema',
+    })).toThrow();
+  });
+
+  test('rejects missing prompt', () => {
+    expect(() => AssetSpecSchema.parse({})).toThrow();
+  });
+});
+
+describe('validateAssetSpec', () => {
+  test('returns no warnings for valid input', () => {
+    const { spec, warnings } = validateAssetSpec({ prompt: 'a small rock' });
+    expect(spec.prompt).toBe('a small rock');
     expect(warnings).toHaveLength(0);
   });
 });
