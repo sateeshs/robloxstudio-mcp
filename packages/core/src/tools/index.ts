@@ -41,6 +41,10 @@ export class RobloxStudioTools {
     this.cookieClient = new RobloxCookieClient();
   }
 
+  getBridge(): BridgeService {
+    return this.bridge;
+  }
+
 
   async getFileTree(path: string = '') {
     const response = await this.client.request('/api/file-tree', { path });

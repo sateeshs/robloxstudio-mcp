@@ -319,15 +319,13 @@ After each execution, before returning success:
 
 ## 11. Current Status
 
-**As of 2026-07-10:** No milestones have been completed. M0 orientation work
-has not started — `docs/NOTES.md` does not exist, `packages/environment-tools/`
-has not been created, and GenerationService API has not been verified.
+**As of 2026-07-10:** M0 and M1 complete. M2 in progress.
 
 | Milestone | Status |
 |-----------|--------|
 | M0 — Orientation | COMPLETE — see docs/NOTES.md |
-| M1 — Skeleton + first tool | NOT STARTED |
-| M2 — Core toolset | NOT STARTED |
+| M1 — Skeleton + first tool | COMPLETE — build_terrain (flat+forest), clear_environment, template executor, capability handshake |
+| M2 — Core toolset | IN PROGRESS |
 | M3 — Cube asset generation | NOT STARTED |
 | M4 — Kid mode + polish | NOT STARTED |
 | M5 — compose_scene (stretch) | NOT STARTED |

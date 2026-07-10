@@ -15,8 +15,15 @@ export interface EnvToolHandler {
 }
 
 function checkPluginCapability(tools: RobloxStudioTools): void {
-  // TODO (M1 Phase 5): Check plugin capability via bridge.
-  // For now, the executeTemplate endpoint must exist on the plugin side.
+  const bridge = tools.getBridge();
+  if (!bridge.hasCapability('executeTemplate')) {
+    throw new Error(
+      'The connected Studio plugin does not support environment tools. ' +
+      'Install the dev plugin with "npm run plugin:install" and restart Studio. ' +
+      'If using the stock Creator Store plugin, disable it first — ' +
+      'two plugins polling the same bridge port will race each other.'
+    );
+  }
 }
 
 export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = {
