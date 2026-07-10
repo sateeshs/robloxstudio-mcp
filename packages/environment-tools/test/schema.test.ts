@@ -330,7 +330,7 @@ describe('AssetSpecSchema', () => {
   test('parses valid prompt with defaults', () => {
     const result = AssetSpecSchema.parse({ prompt: 'a small wizard tower' });
     expect(result.prompt).toBe('a small wizard tower');
-    expect(result.predefinedSchema).toBe('Body1');
+    expect(result.predefinedSchema).toBeUndefined();
     expect(result.position).toEqual({ x: 0, y: 0, z: 0 });
     expect(result.anchorToTerrain).toBe(false);
   });

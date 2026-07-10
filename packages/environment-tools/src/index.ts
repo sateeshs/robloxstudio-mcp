@@ -13,7 +13,7 @@ export { validateTerrainSpec, TerrainSpecSchema } from './schema/terrainSpec.js'
 export { validateMoodSpec, MoodSpecSchema } from './schema/moodSpec.js';
 export { validateScatterSpec, ScatterSpecSchema } from './schema/scatterSpec.js';
 export { validateStructureSpec, StructureSpecSchema } from './schema/structureSpec.js';
-export { validateAssetSpec, AssetSpecSchema } from './schema/assetSpec.js';
+export { validateAssetSpec, AssetSpecSchema, CustomSchemaSchema } from './schema/assetSpec.js';
 export { validateSceneSpec, SceneSpecSchema } from './schema/sceneSpec.js';
 export { validateSculptSpec, SculptSpecSchema } from './schema/sculptSpec.js';
 export { validateWaterSpec, WaterSpecSchema } from './schema/waterSpec.js';
@@ -252,12 +252,16 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
       'DynamicGeneration capability, and the place may need to be published.',
       'Rate limit: 10 generations/min.',
       '',
-      'Predefined schemas: Body1 (single mesh, default), Car5 (5-part vehicle).',
+      'Predefined schemas: Body1 (single mesh), Car5 (5-part vehicle).',
+      'Custom schemas: define named groups for multi-part models.',
+      'Image-guided: provide imageAssetId for reference-based generation.',
       '',
       'Examples:',
       '  {"prompt": "a small wizard tower"}',
       '  {"prompt": "red sports car", "predefinedSchema": "Car5", "position": {"x": 0, "y": 5, "z": 0}}',
       '  {"prompt": "mossy rock", "boundingBox": {"x": 4, "y": 3, "z": 4}, "anchorToTerrain": true}',
+      '  {"prompt": "fantasy dragon", "customSchema": {"groups": ["body", "wings", "tail"]}, "scale": 2}',
+      '  {"prompt": "wooden chair", "imageAssetId": 12345678, "scale": 0.5}',
     ].join('\n'),
     inputSchema: {
       type: 'object',
@@ -270,7 +274,31 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
         predefinedSchema: {
           type: 'string',
           enum: ['Body1', 'Car5'],
-          description: 'Generation schema: Body1 (single mesh) or Car5 (vehicle, default: Body1)',
+          description: 'Generation schema: Body1 (single mesh) or Car5 (vehicle). Mutually exclusive with customSchema.',
+        },
+        customSchema: {
+          type: 'object',
+          description: 'Custom schema with named groups (max 8). Mutually exclusive with predefinedSchema.',
+          properties: {
+            groups: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Named part groups, e.g. ["body", "wheels", "wings"]',
+            },
+          },
+          required: ['groups'],
+        },
+        imageAssetId: {
+          type: 'number',
+          description: 'Roblox asset ID of a reference image for guided generation',
+        },
+        scale: {
+          type: 'number',
+          description: 'Post-generation scale multiplier (0.1-10, default: no scaling)',
+        },
+        saveName: {
+          type: 'string',
+          description: 'Save name for reuse via LoadGeneratedMeshAsync',
         },
         boundingBox: {
           type: 'object',
