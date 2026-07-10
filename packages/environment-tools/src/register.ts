@@ -9,6 +9,7 @@ import { prepareSetMood } from './tools/setMood.js';
 import { prepareScatterObjects } from './tools/scatterObjects.js';
 import { prepareBuildStructure } from './tools/buildStructure.js';
 import { prepareSnapshotScene } from './tools/snapshotScene.js';
+import { prepareGenerateAsset } from './tools/generateAsset.js';
 
 import type { RobloxStudioTools } from '@robloxstudio-mcp/core';
 
@@ -99,6 +100,20 @@ export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = {
       summary: result.ok
         ? `Structure built (opId: ${opId}). Use clear_environment to remove.`
         : `Structure build failed: ${result.error}`,
+    });
+  },
+
+  generate_asset: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareGenerateAsset(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Asset generated (opId: ${opId}). ${result.instancePath ? `Placed at: ${result.instancePath}` : ''}`
+        : `Asset generation failed: ${result.error}`,
     });
   },
 

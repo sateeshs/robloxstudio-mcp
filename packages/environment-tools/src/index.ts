@@ -6,10 +6,12 @@ export { prepareSetMood } from './tools/setMood.js';
 export { prepareScatterObjects } from './tools/scatterObjects.js';
 export { prepareBuildStructure } from './tools/buildStructure.js';
 export { prepareSnapshotScene } from './tools/snapshotScene.js';
+export { prepareGenerateAsset } from './tools/generateAsset.js';
 export { validateTerrainSpec, TerrainSpecSchema } from './schema/terrainSpec.js';
 export { validateMoodSpec, MoodSpecSchema } from './schema/moodSpec.js';
 export { validateScatterSpec, ScatterSpecSchema } from './schema/scatterSpec.js';
 export { validateStructureSpec, StructureSpecSchema } from './schema/structureSpec.js';
+export { validateAssetSpec, AssetSpecSchema } from './schema/assetSpec.js';
 export { ClearSpecSchema } from './schema/clearSpec.js';
 export { renderTemplate, renderTemplateString, sanitizeString, formatValue, setTemplatesDir } from './luau/render.js';
 
@@ -227,6 +229,66 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
         seed: {
           type: 'number',
           description: 'Random seed for procedural variation',
+        },
+      },
+    },
+  },
+  {
+    name: 'generate_asset',
+    category: 'write',
+    description: [
+      'Generate a 3D model using Roblox GenerationService (Cube 3D, beta).',
+      'Creates a mesh/model from a text prompt and places it in the scene.',
+      '',
+      'Requires: Editable Mesh/Image APIs enabled in Game Settings,',
+      'DynamicGeneration capability, and the place may need to be published.',
+      'Rate limit: 10 generations/min.',
+      '',
+      'Predefined schemas: Body1 (single mesh, default), Car5 (5-part vehicle).',
+      '',
+      'Examples:',
+      '  {"prompt": "a small wizard tower"}',
+      '  {"prompt": "red sports car", "predefinedSchema": "Car5", "position": {"x": 0, "y": 5, "z": 0}}',
+      '  {"prompt": "mossy rock", "boundingBox": {"x": 4, "y": 3, "z": 4}, "anchorToTerrain": true}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      required: ['prompt'],
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Text description of the 3D model to generate (max 200 chars)',
+        },
+        predefinedSchema: {
+          type: 'string',
+          enum: ['Body1', 'Car5'],
+          description: 'Generation schema: Body1 (single mesh) or Car5 (vehicle, default: Body1)',
+        },
+        boundingBox: {
+          type: 'object',
+          description: 'Target bounding box size in studs',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+        },
+        position: {
+          type: 'object',
+          description: 'World position to place the model (default: origin)',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+        },
+        anchorToTerrain: {
+          type: 'boolean',
+          description: 'Raycast down to terrain surface for placement (default: false)',
+        },
+        name: {
+          type: 'string',
+          description: 'Name for the generated model instance',
         },
       },
     },

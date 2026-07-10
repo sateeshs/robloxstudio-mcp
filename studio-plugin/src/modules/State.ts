@@ -1,7 +1,7 @@
 import { Connection } from "../types";
 
 const CURRENT_VERSION = "__VERSION__";
-const PLUGIN_CAPABILITIES = ["executeTemplate"];
+const PLUGIN_CAPABILITIES = ["executeTemplate", "generateModel"];
 const MAX_CONNECTIONS = 5;
 const BASE_PORT = 58741;
 let activeTabIndex = 0;

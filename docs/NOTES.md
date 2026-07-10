@@ -150,19 +150,24 @@ content if they haven't intentionally violated policies.
 
 ## M1 — Skeleton + first tool
 
-**Status:** NOT STARTED
+**Status:** COMPLETE — build_terrain (flat+forest), clear_environment, template
+executor, capability handshake.
 
 ---
 
 ## M2 — Core toolset
 
-**Status:** NOT STARTED
+**Status:** COMPLETE — all 7 biomes, set_mood (7 presets), scatter_objects
+(7 templates, server-side PRNG placement), build_structure (house+tower),
+snapshot_scene. 95 tests passing.
 
 ---
 
 ## M3 — Cube asset generation
 
-**Status:** NOT STARTED
+**Status:** COMPLETE — generate_asset tool via GenerateModelAsync, Body1/Car5
+schemas, terrain anchor, friendly error messages for disabled-beta/moderation/
+rate-limit. Requires live Studio verification.
 
 ---
 
