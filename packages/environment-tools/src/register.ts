@@ -10,8 +10,35 @@ import { prepareScatterObjects } from './tools/scatterObjects.js';
 import { prepareBuildStructure } from './tools/buildStructure.js';
 import { prepareSnapshotScene } from './tools/snapshotScene.js';
 import { prepareGenerateAsset } from './tools/generateAsset.js';
+import { prepareComposeScene, executeComposeScene } from './tools/composeScene.js';
+import { prepareSculptTerrain } from './tools/sculptTerrain.js';
+import { prepareConfigureWater } from './tools/configureWater.js';
+import { prepareSetMaterialColors } from './tools/setMaterialColors.js';
+import { prepareAddEffect } from './tools/addEffect.js';
+
+import * as fs from 'fs';
+import * as path from 'path';
 
 import type { RobloxStudioTools } from '@robloxstudio-mcp/core';
+
+/** Append a telemetry entry to logs/scenes.jsonl (best-effort, never throws) */
+function logTelemetry(entry: {
+  tool: string;
+  inputSpec: Record<string, unknown>;
+  ok: boolean;
+  durationMs: number;
+  error?: string;
+  opId?: string;
+}): void {
+  try {
+    const logDir = path.resolve(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    const line = JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n';
+    fs.appendFileSync(path.join(logDir, 'scenes.jsonl'), line);
+  } catch {
+    // Telemetry is best-effort; never block tool execution
+  }
+}
 
 export interface EnvToolHandler {
   (tools: RobloxStudioTools, body: Record<string, unknown>): Promise<{
@@ -46,7 +73,36 @@ function textContent(data: Record<string, unknown>): { content: Array<{ type: st
   return { content: [{ type: 'text', text: JSON.stringify(data) }] };
 }
 
-export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = {
+/** Wrap a handler with telemetry logging */
+function withTelemetry(toolName: string, handler: EnvToolHandler): EnvToolHandler {
+  return async (tools, body) => {
+    const start = Date.now();
+    try {
+      const result = await handler(tools, body);
+      const parsed = JSON.parse(result.content[0].text);
+      logTelemetry({
+        tool: toolName,
+        inputSpec: body,
+        ok: parsed.ok ?? true,
+        durationMs: Date.now() - start,
+        opId: parsed.opId,
+        error: parsed.ok ? undefined : parsed.error,
+      });
+      return result;
+    } catch (err) {
+      logTelemetry({
+        tool: toolName,
+        inputSpec: body,
+        ok: false,
+        durationMs: Date.now() - start,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  };
+}
+
+const _handlers: Record<string, EnvToolHandler> = {
   build_terrain: async (tools, body) => {
     checkPluginCapability(tools);
     const { luauSource, opId, warnings } = prepareBuildTerrain(body);
@@ -142,6 +198,108 @@ export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = {
         : `Clear failed: ${result.error}`,
     });
   },
+
+  compose_scene: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { spec, warnings, sceneId } = prepareComposeScene(body);
+
+    // Execute each step by delegating to the existing individual handlers
+    const { steps, allOk } = await executeComposeScene(spec, sceneId, async (toolName, toolBody) => {
+      try {
+        const handler = _handlers[toolName];
+        if (!handler) {
+          return { ok: false, error: `Unknown tool: ${toolName}` };
+        }
+        const response = await handler(tools, toolBody);
+        const parsed = JSON.parse(response.content[0].text);
+        return {
+          ok: parsed.ok ?? true,
+          opId: parsed.opId as string | undefined,
+          error: parsed.ok ? undefined : (parsed.error as string | undefined),
+        };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    });
+
+    const succeeded = steps.filter(s => s.ok).length;
+    const failed = steps.filter(s => !s.ok).length;
+    const totalMs = steps.reduce((sum, s) => sum + s.durationMs, 0);
+
+    return textContent({
+      ok: allOk,
+      sceneId,
+      warnings,
+      steps,
+      summary: allOk
+        ? `Scene composed successfully (${succeeded} steps, ${totalMs}ms). Use clear_environment to remove.`
+        : `Scene partially composed: ${succeeded} succeeded, ${failed} failed (${totalMs}ms).`,
+    });
+  },
+
+  sculpt_terrain: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareSculptTerrain(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Terrain sculpted (opId: ${opId}). Use clear_environment to remove markers.`
+        : `Sculpt failed: ${result.error}`,
+    });
+  },
+
+  configure_water: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareConfigureWater(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Water configured (opId: ${opId}).`
+        : `Water configuration failed: ${result.error}`,
+    });
+  },
+
+  set_material_colors: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareSetMaterialColors(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Material colors set (opId: ${opId}).`
+        : `Material color set failed: ${result.error}`,
+    });
+  },
+
+  add_effect: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareAddEffect(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Effect added (opId: ${opId}). Use clear_environment to remove.`
+        : `Effect failed: ${result.error}`,
+    });
+  },
 };
+
+// Wrap all handlers with telemetry
+export const ENV_TOOL_HANDLERS: Record<string, EnvToolHandler> = Object.fromEntries(
+  Object.entries(_handlers).map(([name, handler]) => [name, withTelemetry(name, handler)])
+);
 
 export { ENV_TOOL_DEFINITIONS };

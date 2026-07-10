@@ -7,11 +7,21 @@ export { prepareScatterObjects } from './tools/scatterObjects.js';
 export { prepareBuildStructure } from './tools/buildStructure.js';
 export { prepareSnapshotScene } from './tools/snapshotScene.js';
 export { prepareGenerateAsset } from './tools/generateAsset.js';
+export { prepareComposeScene, executeComposeScene } from './tools/composeScene.js';
+export { prepareSculptTerrain } from './tools/sculptTerrain.js';
 export { validateTerrainSpec, TerrainSpecSchema } from './schema/terrainSpec.js';
 export { validateMoodSpec, MoodSpecSchema } from './schema/moodSpec.js';
 export { validateScatterSpec, ScatterSpecSchema } from './schema/scatterSpec.js';
 export { validateStructureSpec, StructureSpecSchema } from './schema/structureSpec.js';
-export { validateAssetSpec, AssetSpecSchema } from './schema/assetSpec.js';
+export { validateAssetSpec, AssetSpecSchema, CustomSchemaSchema } from './schema/assetSpec.js';
+export { validateSceneSpec, SceneSpecSchema } from './schema/sceneSpec.js';
+export { validateSculptSpec, SculptSpecSchema } from './schema/sculptSpec.js';
+export { validateWaterSpec, WaterSpecSchema } from './schema/waterSpec.js';
+export { validateMaterialColorSpec, MaterialColorSpecSchema } from './schema/materialColorSpec.js';
+export { prepareConfigureWater } from './tools/configureWater.js';
+export { prepareSetMaterialColors } from './tools/setMaterialColors.js';
+export { prepareAddEffect } from './tools/addEffect.js';
+export { validateEffectSpec, EffectSpecSchema } from './schema/effectSpec.js';
 export { ClearSpecSchema } from './schema/clearSpec.js';
 export { renderTemplate, renderTemplateString, sanitizeString, formatValue, setTemplatesDir } from './luau/render.js';
 
@@ -23,7 +33,7 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
       'Build terrain in Roblox Studio using a biome template.',
       'Creates terrain with the specified biome, size, and height variation in one operation.',
       '',
-      'Available biomes: flat, forest, desert, snow, island, plains, mountains.',
+      'Available biomes: flat, forest, desert, snow, island, plains, mountains, swamp, volcanic, jungle, savanna, mesa.',
       '',
       'Examples:',
       '  {"biome": "flat", "size": {"x": 512, "z": 512}}',
@@ -36,7 +46,7 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: {
         biome: {
           type: 'string',
-          enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains'],
+          enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains', 'swamp', 'volcanic', 'jungle', 'savanna', 'mesa'],
           description: 'Terrain biome type',
         },
         size: {
@@ -244,12 +254,16 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
       'DynamicGeneration capability, and the place may need to be published.',
       'Rate limit: 10 generations/min.',
       '',
-      'Predefined schemas: Body1 (single mesh, default), Car5 (5-part vehicle).',
+      'Predefined schemas: Body1 (single mesh), Car5 (5-part vehicle).',
+      'Custom schemas: define named groups for multi-part models.',
+      'Image-guided: provide imageAssetId for reference-based generation.',
       '',
       'Examples:',
       '  {"prompt": "a small wizard tower"}',
       '  {"prompt": "red sports car", "predefinedSchema": "Car5", "position": {"x": 0, "y": 5, "z": 0}}',
       '  {"prompt": "mossy rock", "boundingBox": {"x": 4, "y": 3, "z": 4}, "anchorToTerrain": true}',
+      '  {"prompt": "fantasy dragon", "customSchema": {"groups": ["body", "wings", "tail"]}, "scale": 2}',
+      '  {"prompt": "wooden chair", "imageAssetId": 12345678, "scale": 0.5}',
     ].join('\n'),
     inputSchema: {
       type: 'object',
@@ -262,7 +276,31 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
         predefinedSchema: {
           type: 'string',
           enum: ['Body1', 'Car5'],
-          description: 'Generation schema: Body1 (single mesh) or Car5 (vehicle, default: Body1)',
+          description: 'Generation schema: Body1 (single mesh) or Car5 (vehicle). Mutually exclusive with customSchema.',
+        },
+        customSchema: {
+          type: 'object',
+          description: 'Custom schema with named groups (max 8). Mutually exclusive with predefinedSchema.',
+          properties: {
+            groups: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Named part groups, e.g. ["body", "wheels", "wings"]',
+            },
+          },
+          required: ['groups'],
+        },
+        imageAssetId: {
+          type: 'number',
+          description: 'Roblox asset ID of a reference image for guided generation',
+        },
+        scale: {
+          type: 'number',
+          description: 'Post-generation scale multiplier (0.1-10, default: no scaling)',
+        },
+        saveName: {
+          type: 'string',
+          description: 'Save name for reuse via LoadGeneratedMeshAsync',
         },
         boundingBox: {
           type: 'object',
@@ -325,6 +363,272 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
         confirm: {
           type: 'boolean',
           description: 'Must be true to confirm clearing',
+        },
+      },
+    },
+  },
+  {
+    name: 'compose_scene',
+    category: 'write',
+    description: [
+      'Build a complete scene from a single SceneSpec — sequences terrain, mood,',
+      'structures, scatters, and assets in the correct order.',
+      'Each step runs independently; partial failures are reported per-step.',
+      '',
+      'Order: terrain → mood → structures → scatters → assets.',
+      'Use this instead of calling individual tools when you want a full scene.',
+      '',
+      'Examples:',
+      '  {"terrain": {"biome": "forest", "size": {"x": 512, "z": 512}, "water": true}, "mood": {"preset": "sunset"}}',
+      '  {"terrain": {"biome": "snow"}, "mood": {"preset": "night"}, "structures": [{"template": "tower", "position": {"x": 0, "y": 0, "z": 0}, "material": "ice"}], "scatters": [{"source": {"kind": "template", "name": "snowman"}, "count": 10, "area": {"origin": {"x": 0, "y": 0, "z": 0}, "size": {"x": 200, "z": 200}}}]}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        terrain: {
+          type: 'object',
+          description: 'Terrain specification (see build_terrain)',
+          properties: {
+            biome: { type: 'string', enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains', 'swamp', 'volcanic', 'jungle', 'savanna', 'mesa'] },
+            size: { type: 'object', properties: { x: { type: 'number' }, z: { type: 'number' } } },
+            heightVariation: { type: 'string', enum: ['flat', 'gentle', 'hilly', 'mountainous'] },
+            water: { type: 'boolean' },
+            seed: { type: 'number' },
+            origin: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+          },
+        },
+        mood: {
+          type: 'object',
+          description: 'Mood/lighting specification (see set_mood)',
+          properties: {
+            preset: { type: 'string', enum: ['morning', 'noon', 'sunset', 'night', 'spooky', 'underwater', 'alien'] },
+            fogDensity: { type: 'number' },
+            overrides: { type: 'object' },
+          },
+        },
+        structures: {
+          type: 'array',
+          description: 'Array of structure specs (max 20, see build_structure)',
+          items: { type: 'object' },
+        },
+        scatters: {
+          type: 'array',
+          description: 'Array of scatter specs (max 10, see scatter_objects)',
+          items: { type: 'object' },
+        },
+        assets: {
+          type: 'array',
+          description: 'Array of asset generation specs (max 5, see generate_asset)',
+          items: { type: 'object' },
+        },
+      },
+    },
+  },
+  {
+    name: 'sculpt_terrain',
+    category: 'write',
+    description: [
+      'Sculpt terrain with voxel-level precision.',
+      'Supports fill, subtract, smooth, replace_material, and paint operations.',
+      'Shapes: block, ball, cylinder, wedge.',
+      '',
+      'Operations:',
+      '  fill — add terrain with a material',
+      '  subtract — carve/remove terrain (caves, tunnels)',
+      '  smooth — average occupancy for smoother surfaces',
+      '  replace_material — swap one material for another in a region',
+      '  paint — change surface material without altering shape',
+      '',
+      'Examples:',
+      '  {"operation": "fill", "shape": "ball", "position": {"x": 0, "y": 10, "z": 0}, "size": {"x": 40, "y": 40, "z": 40}, "material": "Rock"}',
+      '  {"operation": "subtract", "shape": "cylinder", "position": {"x": 0, "y": 0, "z": 0}, "size": {"x": 10, "y": 30, "z": 10}}',
+      '  {"operation": "smooth", "position": {"x": 0, "y": 5, "z": 0}, "size": {"x": 64, "y": 32, "z": 64}, "strength": 0.8}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      required: ['operation', 'position', 'size'],
+      properties: {
+        operation: {
+          type: 'string',
+          enum: ['fill', 'subtract', 'smooth', 'replace_material', 'paint'],
+          description: 'Sculpt operation to perform',
+        },
+        shape: {
+          type: 'string',
+          enum: ['block', 'ball', 'cylinder', 'wedge'],
+          description: 'Shape of the sculpt region (default: ball)',
+        },
+        position: {
+          type: 'object',
+          description: 'Center position of the sculpt operation',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+          required: ['x', 'y', 'z'],
+        },
+        size: {
+          type: 'object',
+          description: 'Size of the sculpt region in studs (clamped 4-512)',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+          required: ['x', 'y', 'z'],
+        },
+        material: {
+          type: 'string',
+          description: 'Target material for fill/paint/replace operations',
+        },
+        sourceMaterial: {
+          type: 'string',
+          description: 'Source material for replace_material operation',
+        },
+        strength: {
+          type: 'number',
+          description: 'Smoothing strength 0-1 (default: 0.5, for smooth operation)',
+        },
+      },
+    },
+  },
+  {
+    name: 'configure_water',
+    category: 'write',
+    description: [
+      'Configure terrain water properties (color, transparency, reflectance, waves).',
+      'Modifies the Terrain instance water settings in one operation.',
+      '',
+      'Examples:',
+      '  {"color": "#1E90FF", "transparency": 0.5}',
+      '  {"waveSize": 0.3, "waveSpeed": 20}',
+      '  {"color": "#00CED1", "transparency": 0.2, "reflectance": 0.8, "waveSize": 0.1, "waveSpeed": 5}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        color: {
+          type: 'string',
+          description: 'Water color as hex #RRGGBB (optional, keeps current if omitted)',
+        },
+        transparency: {
+          type: 'number',
+          description: 'Water transparency 0-1 (default: 0.3)',
+        },
+        reflectance: {
+          type: 'number',
+          description: 'Water reflectance 0-1 (default: 1)',
+        },
+        waveSize: {
+          type: 'number',
+          description: 'Wave size 0-1 (default: 0.15)',
+        },
+        waveSpeed: {
+          type: 'number',
+          description: 'Wave speed 0-100 (default: 10)',
+        },
+      },
+    },
+  },
+  {
+    name: 'set_material_colors',
+    category: 'write',
+    description: [
+      'Override terrain material colors for custom palettes.',
+      'Changes the display color of terrain materials without affecting geometry.',
+      '',
+      'Available materials: Grass, Sand, Rock, Snow, Ice, Mud, Ground, Sandstone,',
+      'Slate, LeafyGrass, Basalt, CrackedLava, Limestone, Salt, WoodPlanks,',
+      'Concrete, Brick, Cobblestone, Asphalt, Glacier, Pavement, SmoothPlastic.',
+      '',
+      'Examples:',
+      '  {"colors": {"Grass": "#2E8B57", "Rock": "#696969"}}',
+      '  {"colors": {"Sand": "#F4A460", "Sandstone": "#DAA520", "Ground": "#8B4513"}}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      required: ['colors'],
+      properties: {
+        colors: {
+          type: 'object',
+          description: 'Map of material name to hex color #RRGGBB',
+          additionalProperties: { type: 'string' },
+        },
+      },
+    },
+  },
+  {
+    name: 'add_effect',
+    category: 'write',
+    description: [
+      'Add visual effects, lights, or ambient sounds to the scene.',
+      'Creates particle effects, dynamic lights, explosions, or spatial audio.',
+      '',
+      'Particle effects: fire, smoke, sparkles, rain, snow, magic, dust, embers.',
+      'Lights: torch_light, spotlight, neon_glow, campfire_light.',
+      'Physics: explosion.',
+      'Ambient sounds: ambient_fire, ambient_wind, ambient_water, ambient_rain,',
+      '  ambient_birds, ambient_cave, ambient_music.',
+      '',
+      'Examples:',
+      '  {"effect": "fire", "position": {"x": 0, "y": 5, "z": 0}, "size": 3}',
+      '  {"effect": "rain", "position": {"x": 0, "y": 0, "z": 0}, "radius": 100, "intensity": 0.8}',
+      '  {"effect": "campfire_light", "position": {"x": 10, "y": 1, "z": 10}}',
+      '  {"effect": "magic", "position": {"x": 0, "y": 3, "z": 0}, "color": "#8050FF"}',
+      '  {"effect": "ambient_birds", "position": {"x": 0, "y": 10, "z": 0}, "radius": 50}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      required: ['effect'],
+      properties: {
+        effect: {
+          type: 'string',
+          enum: [
+            'fire', 'smoke', 'sparkles', 'rain', 'snow', 'magic', 'dust', 'embers',
+            'torch_light', 'spotlight', 'neon_glow', 'campfire_light',
+            'explosion',
+            'ambient_fire', 'ambient_wind', 'ambient_water', 'ambient_rain',
+            'ambient_birds', 'ambient_cave', 'ambient_music',
+          ],
+          description: 'Effect type to add',
+        },
+        position: {
+          type: 'object',
+          description: 'World position for the effect (default: 0,5,0)',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+        },
+        color: {
+          type: 'string',
+          description: 'Custom color as hex #RRGGBB (optional, uses preset default)',
+        },
+        size: {
+          type: 'number',
+          description: 'Effect scale 0.1-50 (default: 3)',
+        },
+        intensity: {
+          type: 'number',
+          description: 'Effect intensity 0-1 (default: 0.7)',
+        },
+        radius: {
+          type: 'number',
+          description: 'Light/sound range in studs 1-200 (default: 20)',
+        },
+        enabled: {
+          type: 'boolean',
+          description: 'Start enabled (default: true)',
+        },
+        looped: {
+          type: 'boolean',
+          description: 'Loop sound effects (default: true)',
+        },
+        name: {
+          type: 'string',
+          description: 'Custom name for the effect instance',
         },
       },
     },

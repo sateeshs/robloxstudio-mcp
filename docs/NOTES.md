@@ -173,10 +173,65 @@ rate-limit. Requires live Studio verification.
 
 ## M4 — Kid mode + polish
 
-**Status:** NOT STARTED
+**Status:** COMPLETE — kid-mode profile filter (--profile kid / MCP_PROFILE=kid),
+telemetry logging to logs/scenes.jsonl, user guide at docs/ENVIRONMENT_TOOLS.md
+with 10 example prompts. 103 tests passing (35 core + 68 environment-tools).
+
+### Implementation details
+- `config/kid-mode.json`: allowlist of 7 env tools + read-only inspection tools
+- `packages/robloxstudio-mcp/src/index.ts`: profile flag parsing, tool filtering
+- `packages/environment-tools/src/register.ts`: telemetry wrapper (logTelemetry +
+  withTelemetry) around all env tool handlers, best-effort JSONL logging
+- `docs/ENVIRONMENT_TOOLS.md`: quick start, 10 example prompts, biome/mood
+  tables, safety/undo docs, telemetry description
 
 ---
 
-## M5 — compose_scene (stretch)
+## M5 — compose_scene orchestrator
 
-**Status:** NOT STARTED
+**Status:** COMPLETE — SceneSpec schema (terrain + mood + structures + scatters +
+assets), sequential execution with per-step failure reporting, array limits
+clamped with warnings (20 structures, 10 scatters, 5 assets). 15 tests.
+
+---
+
+## M6 — WriteVoxels terrain upgrade
+
+**Status:** COMPLETE — Server-side heightmap computation via multi-octave fractal
+noise (noise.ts, heightmap.ts), shared terrain_voxel_writer.luau template with
+64×64 chunk processing, partial occupancy for smooth surfaces. 6 biomes
+(forest, desert, snow, island, plains, mountains) migrated from FillBlock to
+WriteVoxels pipeline. 17 terrain tests.
+
+---
+
+## M7 — Sculpt + 5 new biomes
+
+**Status:** COMPLETE — sculpt_terrain tool (fill/subtract/smooth/replace_material/
+paint operations, block/ball/cylinder/wedge shapes, 22 terrain materials).
+5 new biomes: swamp, volcanic (caldera heightTransform), jungle, savanna,
+mesa (stepped plateaus). All 11 biomes use WriteVoxels except flat. 7 sculpt tests.
+
+---
+
+## M8 — Water & material color control
+
+**Status:** COMPLETE — configure_water tool (color, transparency, reflectance,
+waveSize, waveSpeed) and set_material_colors tool (per-material hex overrides).
+Both registered, kid-mode allowlisted, 12 tests.
+
+---
+
+## M9 — Enhanced 3D asset generation
+
+**Status:** COMPLETE — Custom SchemaDefinition with named groups (up to 8),
+image-guided generation via Content.fromAssetId(), post-generation ScaleTo()
+sizing, saveName for LoadGeneratedMeshAsync reuse. Mutual exclusion enforced
+between predefinedSchema and customSchema. 14 tests.
+
+---
+
+## Phase 2 Plan
+
+See `plans/PLAN-v2.md` for full specification. All Phase 2 milestones (M5–M9)
+are COMPLETE. Total test suite: 177 tests (35 core + 142 environment-tools).

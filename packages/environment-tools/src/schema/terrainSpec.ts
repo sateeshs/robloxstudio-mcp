@@ -14,6 +14,7 @@ export type Vec3 = z.infer<typeof Vec3Schema>;
 
 export const BiomeSchema = z.enum([
   'forest', 'desert', 'snow', 'island', 'plains', 'mountains', 'flat',
+  'swamp', 'volcanic', 'jungle', 'savanna', 'mesa',
 ]);
 
 export type Biome = z.infer<typeof BiomeSchema>;

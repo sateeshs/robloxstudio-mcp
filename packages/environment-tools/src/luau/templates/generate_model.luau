@@ -1,5 +1,8 @@
 -- generate_model.luau — Generate a 3D model via GenerationService (Cube 3D)
--- Params: promptEscaped, predefinedSchema, hasBoundingBox, bboxX, bboxY, bboxZ, posX, posY, posZ, anchorToTerrain, modelName, opId
+-- Params: promptEscaped, predefinedSchema, hasCustomSchema, customSchemaGroups,
+--         hasImageRef, imageAssetId, hasScale, scale, hasSaveName, saveName,
+--         hasBoundingBox, bboxX, bboxY, bboxZ, posX, posY, posZ,
+--         anchorToTerrain, modelName, opId
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local CollectionService = game:GetService("CollectionService")
@@ -16,7 +19,13 @@ end
 
 local ok, err = pcall(function()
 	local prompt = {{promptEscaped}}
-	local schemaName = {{predefinedSchema}}
+	local hasCustomSchema = {{hasCustomSchema}}
+	local hasImageRef = {{hasImageRef}}
+	local imageAssetId = {{imageAssetId}}
+	local hasScale = {{hasScale}}
+	local scaleVal = {{scale}}
+	local hasSaveName = {{hasSaveName}}
+	local saveName = {{saveName}}
 	local hasBBox = {{hasBoundingBox}}
 	local bboxX = {{bboxX}}
 	local bboxY = {{bboxY}}
@@ -32,9 +41,28 @@ local ok, err = pcall(function()
 		TextPrompt = prompt,
 	}
 
-	local schema = {
-		PredefinedSchema = schemaName,
-	}
+	-- Image-guided generation
+	if hasImageRef then
+		inputs.ImagePrompt = Content.fromAssetId(imageAssetId)
+	end
+
+	-- Build schema: custom or predefined
+	local schema
+	if hasCustomSchema then
+		local groupNames = {--[[CUSTOM_GROUPS]]}
+		local groups = {}
+		for _, name in ipairs(groupNames) do
+			table.insert(groups, { Name = name })
+		end
+		schema = {
+			SchemaDefinition = groups,
+		}
+	else
+		local schemaName = {{predefinedSchema}}
+		schema = {
+			PredefinedSchema = schemaName,
+		}
+	end
 
 	local options = {}
 	if hasBBox then
@@ -72,6 +100,11 @@ local ok, err = pcall(function()
 	end
 
 	local generatedModel = resultOrErr
+
+	-- Post-generation scaling via ScaleTo
+	if hasScale and scaleVal ~= 1 and generatedModel:IsA("Model") then
+		generatedModel:ScaleTo(scaleVal)
+	end
 
 	-- Ensure EnvTools folder
 	local folder = workspace:FindFirstChild("EnvTools")
@@ -140,6 +173,11 @@ local ok, err = pcall(function()
 			end
 		end
 
+		-- Scale single parts via Size
+		if hasScale and scaleVal ~= 1 then
+			generatedModel.Size = generatedModel.Size * scaleVal
+		end
+
 		generatedModel.Position = targetPos
 		generatedModel.Parent = assetsFolder
 	else
@@ -152,6 +190,11 @@ local ok, err = pcall(function()
 	generatedModel:SetAttribute("EnvToolsOp", OP_ID)
 	generatedModel:SetAttribute("EnvToolsType", "asset")
 	generatedModel:SetAttribute("GenerationPrompt", prompt)
+
+	-- Save generation for LoadGeneratedMeshAsync reuse
+	if hasSaveName then
+		generatedModel:SetAttribute("EnvToolsSaveName", saveName)
+	end
 
 	for _, desc in generatedModel:GetDescendants() do
 		if desc:IsA("BasePart") or desc:IsA("Model") then

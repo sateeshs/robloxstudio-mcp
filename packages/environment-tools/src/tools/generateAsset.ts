@@ -16,10 +16,24 @@ export function prepareGenerateAsset(rawInput: unknown): GenerateAssetResult {
 
   const modelName = spec.name ?? `Generated_${opId}`;
   const hasBBox = spec.boundingBox !== undefined;
+  const hasCustomSchema = spec.customSchema !== undefined;
+  const hasImageRef = spec.imageAssetId !== undefined;
+  const hasScale = spec.scale !== undefined;
+  const hasSaveName = spec.saveName !== undefined;
 
   const params: RenderParams = {
     promptEscaped: spec.prompt,
-    predefinedSchema: spec.predefinedSchema,
+    predefinedSchema: spec.predefinedSchema ?? 'Body1',
+    hasCustomSchema,
+    customSchemaGroups: hasCustomSchema
+      ? spec.customSchema!.groups.map(g => `"${g}"`).join(',')
+      : '',
+    hasImageRef,
+    imageAssetId: spec.imageAssetId ?? 0,
+    hasScale,
+    scale: spec.scale ?? 1,
+    hasSaveName,
+    saveName: spec.saveName ?? '',
     hasBoundingBox: hasBBox,
     bboxX: hasBBox ? spec.boundingBox!.x : 0,
     bboxY: hasBBox ? spec.boundingBox!.y : 0,
@@ -32,6 +46,13 @@ export function prepareGenerateAsset(rawInput: unknown): GenerateAssetResult {
     opId: opId,
   };
 
-  const luauSource = renderTemplate('generate_model.luau', params);
+  let luauSource = renderTemplate('generate_model.luau', params);
+
+  // Replace custom groups marker with actual group names array
+  if (hasCustomSchema) {
+    const groupsLiteral = spec.customSchema!.groups.map(g => `"${g}"`).join(',');
+    luauSource = luauSource.replace('{--[[CUSTOM_GROUPS]]}', `{${groupsLiteral}}`);
+  }
+
   return { ok: true, warnings, luauSource, opId };
 }
