@@ -319,13 +319,23 @@ After each execution, before returning success:
 
 ## 11. Current Status
 
-**As of 2026-07-10:** M0 and M1 complete. M2 in progress.
+**As of 2026-07-10:** M0–M4 complete. Phase 2 planned in plans/PLAN-v2.md.
 
 | Milestone | Status |
 |-----------|--------|
 | M0 — Orientation | COMPLETE — see docs/NOTES.md |
 | M1 — Skeleton + first tool | COMPLETE — build_terrain (flat+forest), clear_environment, template executor, capability handshake |
-| M2 — Core toolset | IN PROGRESS |
-| M3 — Cube asset generation | NOT STARTED |
-| M4 — Kid mode + polish | NOT STARTED |
-| M5 — compose_scene (stretch) | NOT STARTED |
+| M2 — Core toolset | COMPLETE — all 7 biomes, set_mood, scatter_objects, build_structure, snapshot_scene |
+| M3 — Cube asset generation | COMPLETE — generate_asset via GenerateModelAsync, Body1/Car5 schemas |
+| M4 — Kid mode + polish | COMPLETE — profile filter, telemetry, user guide, 103 tests passing |
+| M5 — compose_scene (stretch) | NOT STARTED — see PLAN-v2.md for enhanced scope |
+
+### Phase 2 (PLAN-v2.md)
+
+| Milestone | Status |
+|-----------|--------|
+| M5 — compose_scene | NOT STARTED |
+| M6 — WriteVoxels terrain upgrade | NOT STARTED |
+| M7 — New biomes + sculpt_terrain | NOT STARTED |
+| M8 — Water & material control | NOT STARTED |
+| M9 — Enhanced 3D generation | NOT STARTED |

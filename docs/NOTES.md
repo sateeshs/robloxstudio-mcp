@@ -173,10 +173,28 @@ rate-limit. Requires live Studio verification.
 
 ## M4 — Kid mode + polish
 
-**Status:** NOT STARTED
+**Status:** COMPLETE — kid-mode profile filter (--profile kid / MCP_PROFILE=kid),
+telemetry logging to logs/scenes.jsonl, user guide at docs/ENVIRONMENT_TOOLS.md
+with 10 example prompts. 103 tests passing (35 core + 68 environment-tools).
+
+### Implementation details
+- `config/kid-mode.json`: allowlist of 7 env tools + read-only inspection tools
+- `packages/robloxstudio-mcp/src/index.ts`: profile flag parsing, tool filtering
+- `packages/environment-tools/src/register.ts`: telemetry wrapper (logTelemetry +
+  withTelemetry) around all env tool handlers, best-effort JSONL logging
+- `docs/ENVIRONMENT_TOOLS.md`: quick start, 10 example prompts, biome/mood
+  tables, safety/undo docs, telemetry description
 
 ---
 
 ## M5 — compose_scene (stretch)
 
 **Status:** NOT STARTED
+
+---
+
+## Phase 2 Plan
+
+See `plans/PLAN-v2.md` for the enhanced terrain (WriteVoxels migration, 5 new
+biomes, sculpting, water/material control) and 3D asset generation upgrades
+(custom schemas, image-guided generation, scale/reuse). Milestones M5–M9.
