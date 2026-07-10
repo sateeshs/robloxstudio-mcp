@@ -171,10 +171,13 @@ export function createHttpServer(tools: RobloxStudioTools, bridge: BridgeService
 
 
   app.post('/ready', (req, res) => {
-    const { instanceId, role } = req.body;
+    const { instanceId, role, pluginVersion, capabilities } = req.body;
 
     if (instanceId && role) {
-      const assignedRole = bridge.registerInstance(instanceId, role);
+      const assignedRole = bridge.registerInstance(instanceId, role, {
+        pluginVersion,
+        capabilities: Array.isArray(capabilities) ? capabilities : [],
+      });
       res.json({ success: true, assignedRole });
     } else {
       bridge.registerInstance('legacy', 'edit');

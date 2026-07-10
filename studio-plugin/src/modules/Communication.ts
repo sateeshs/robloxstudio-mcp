@@ -319,7 +319,14 @@ function activatePlugin(connIndex?: number) {
 				Url: `${conn.serverUrl}/ready`,
 				Method: "POST",
 				Headers: { "Content-Type": "application/json" },
-				Body: HttpService.JSONEncode({ instanceId, role: detectRole(), pluginReady: true, timestamp: tick() }),
+				Body: HttpService.JSONEncode({
+				instanceId,
+				role: detectRole(),
+				pluginReady: true,
+				timestamp: tick(),
+				pluginVersion: State.CURRENT_VERSION,
+				capabilities: State.PLUGIN_CAPABILITIES,
+			}),
 			});
 		});
 		if (readyOk && readyResult.Success) {

@@ -5,6 +5,8 @@ export interface PluginInstance {
   role: string;
   lastActivity: number;
   connectedAt: number;
+  pluginVersion?: string;
+  capabilities: string[];
 }
 
 interface PendingRequest {
@@ -26,7 +28,7 @@ export class BridgeService {
   private nextClientIndex = 1;
   private requestTimeout = 30000;
 
-  registerInstance(instanceId: string, role: string): string {
+  registerInstance(instanceId: string, role: string, opts?: { pluginVersion?: string; capabilities?: string[] }): string {
     let assignedRole = role;
     if (role === 'client') {
       assignedRole = `client-${this.nextClientIndex}`;
@@ -38,9 +40,20 @@ export class BridgeService {
       role: assignedRole,
       lastActivity: Date.now(),
       connectedAt: Date.now(),
+      pluginVersion: opts?.pluginVersion,
+      capabilities: opts?.capabilities ?? [],
     });
 
     return assignedRole;
+  }
+
+  hasCapability(capability: string): boolean {
+    for (const inst of this.instances.values()) {
+      if (inst.capabilities.includes(capability)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   unregisterInstance(instanceId: string) {
