@@ -11,6 +11,7 @@ import { prepareBuildStructure } from './tools/buildStructure.js';
 import { prepareSnapshotScene } from './tools/snapshotScene.js';
 import { prepareGenerateAsset } from './tools/generateAsset.js';
 import { prepareComposeScene, executeComposeScene } from './tools/composeScene.js';
+import { prepareSculptTerrain } from './tools/sculptTerrain.js';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -233,6 +234,20 @@ const _handlers: Record<string, EnvToolHandler> = {
       summary: allOk
         ? `Scene composed successfully (${succeeded} steps, ${totalMs}ms). Use clear_environment to remove.`
         : `Scene partially composed: ${succeeded} succeeded, ${failed} failed (${totalMs}ms).`,
+    });
+  },
+
+  sculpt_terrain: async (tools, body) => {
+    checkPluginCapability(tools);
+    const { luauSource, opId, warnings } = prepareSculptTerrain(body);
+    const result = await executeAndParse(tools, luauSource, opId);
+    return textContent({
+      ...result,
+      opId,
+      warnings,
+      summary: result.ok
+        ? `Terrain sculpted (opId: ${opId}). Use clear_environment to remove markers.`
+        : `Sculpt failed: ${result.error}`,
     });
   },
 };

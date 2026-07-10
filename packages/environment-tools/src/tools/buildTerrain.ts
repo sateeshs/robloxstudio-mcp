@@ -17,7 +17,10 @@ const FLAT_MATERIAL_MAP: Record<string, string> = {
 };
 
 /** Biomes that use the WriteVoxels pipeline */
-const VOXEL_BIOMES = new Set(['forest', 'desert', 'snow', 'island', 'plains', 'mountains']);
+const VOXEL_BIOMES = new Set([
+  'forest', 'desert', 'snow', 'island', 'plains', 'mountains',
+  'swamp', 'volcanic', 'jungle', 'savanna', 'mesa',
+]);
 
 export interface BuildTerrainResult {
   ok: boolean;

@@ -55,7 +55,7 @@ describe('noise', () => {
 });
 
 describe('biomes', () => {
-  const biomeNames = ['forest', 'desert', 'snow', 'island', 'plains', 'mountains'];
+  const biomeNames = ['forest', 'desert', 'snow', 'island', 'plains', 'mountains', 'swamp', 'volcanic', 'jungle', 'savanna', 'mesa'];
 
   test.each(biomeNames)('createBiomeConfig returns valid config for %s', (biome) => {
     const config = createBiomeConfig(biome, 42, 'gentle', false);
@@ -178,5 +178,89 @@ describe('encodeHeightmapForLuau', () => {
     const mCount = materialsLiteral.slice(1, -1).split(',').length;
     expect(hCount).toBe(hm.width * hm.depth);
     expect(mCount).toBe(hm.width * hm.depth);
+  });
+});
+
+// Sculpt schema tests
+import { validateSculptSpec, SculptSpecSchema } from '../src/schema/sculptSpec.js';
+import { prepareSculptTerrain } from '../src/tools/sculptTerrain.js';
+
+describe('SculptSpecSchema', () => {
+  test('parses valid fill operation', () => {
+    const result = SculptSpecSchema.parse({
+      operation: 'fill',
+      shape: 'ball',
+      position: { x: 0, y: 10, z: 0 },
+      size: { x: 40, y: 40, z: 40 },
+      material: 'Rock',
+    });
+    expect(result.operation).toBe('fill');
+    expect(result.shape).toBe('ball');
+    expect(result.material).toBe('Rock');
+  });
+
+  test('defaults shape to ball', () => {
+    const result = SculptSpecSchema.parse({
+      operation: 'subtract',
+      position: { x: 0, y: 0, z: 0 },
+      size: { x: 20, y: 20, z: 20 },
+    });
+    expect(result.shape).toBe('ball');
+  });
+
+  test('clamps size values', () => {
+    const { warnings } = validateSculptSpec({
+      operation: 'fill',
+      position: { x: 0, y: 0, z: 0 },
+      size: { x: 2, y: 600, z: 50 },
+    });
+    expect(warnings.some(w => w.includes('size.x clamped'))).toBe(true);
+    expect(warnings.some(w => w.includes('size.y clamped'))).toBe(true);
+  });
+
+  test('rejects invalid operation', () => {
+    expect(() => SculptSpecSchema.parse({
+      operation: 'explode',
+      position: { x: 0, y: 0, z: 0 },
+      size: { x: 10, y: 10, z: 10 },
+    })).toThrow();
+  });
+
+  test('all operations are valid', () => {
+    for (const op of ['fill', 'subtract', 'smooth', 'replace_material', 'paint']) {
+      const result = SculptSpecSchema.parse({
+        operation: op,
+        position: { x: 0, y: 0, z: 0 },
+        size: { x: 20, y: 20, z: 20 },
+      });
+      expect(result.operation).toBe(op);
+    }
+  });
+
+  test('all shapes are valid', () => {
+    for (const shape of ['block', 'ball', 'cylinder', 'wedge']) {
+      const result = SculptSpecSchema.parse({
+        operation: 'fill',
+        shape,
+        position: { x: 0, y: 0, z: 0 },
+        size: { x: 20, y: 20, z: 20 },
+      });
+      expect(result.shape).toBe(shape);
+    }
+  });
+});
+
+describe('prepareSculptTerrain', () => {
+  test('generates valid luau source', () => {
+    const result = prepareSculptTerrain({
+      operation: 'fill',
+      shape: 'block',
+      position: { x: 10, y: 5, z: -10 },
+      size: { x: 30, y: 20, z: 30 },
+      material: 'Sand',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.luauSource).toContain('ENVTOOLS');
+    expect(result.opId).toMatch(/^[a-f0-9]{8}$/);
   });
 });

@@ -8,12 +8,14 @@ export { prepareBuildStructure } from './tools/buildStructure.js';
 export { prepareSnapshotScene } from './tools/snapshotScene.js';
 export { prepareGenerateAsset } from './tools/generateAsset.js';
 export { prepareComposeScene, executeComposeScene } from './tools/composeScene.js';
+export { prepareSculptTerrain } from './tools/sculptTerrain.js';
 export { validateTerrainSpec, TerrainSpecSchema } from './schema/terrainSpec.js';
 export { validateMoodSpec, MoodSpecSchema } from './schema/moodSpec.js';
 export { validateScatterSpec, ScatterSpecSchema } from './schema/scatterSpec.js';
 export { validateStructureSpec, StructureSpecSchema } from './schema/structureSpec.js';
 export { validateAssetSpec, AssetSpecSchema } from './schema/assetSpec.js';
 export { validateSceneSpec, SceneSpecSchema } from './schema/sceneSpec.js';
+export { validateSculptSpec, SculptSpecSchema } from './schema/sculptSpec.js';
 export { ClearSpecSchema } from './schema/clearSpec.js';
 export { renderTemplate, renderTemplateString, sanitizeString, formatValue, setTemplatesDir } from './luau/render.js';
 
@@ -25,7 +27,7 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
       'Build terrain in Roblox Studio using a biome template.',
       'Creates terrain with the specified biome, size, and height variation in one operation.',
       '',
-      'Available biomes: flat, forest, desert, snow, island, plains, mountains.',
+      'Available biomes: flat, forest, desert, snow, island, plains, mountains, swamp, volcanic, jungle, savanna, mesa.',
       '',
       'Examples:',
       '  {"biome": "flat", "size": {"x": 512, "z": 512}}',
@@ -38,7 +40,7 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: {
         biome: {
           type: 'string',
-          enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains'],
+          enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains', 'swamp', 'volcanic', 'jungle', 'savanna', 'mesa'],
           description: 'Terrain biome type',
         },
         size: {
@@ -353,7 +355,7 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'object',
           description: 'Terrain specification (see build_terrain)',
           properties: {
-            biome: { type: 'string', enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains'] },
+            biome: { type: 'string', enum: ['flat', 'forest', 'desert', 'snow', 'island', 'plains', 'mountains', 'swamp', 'volcanic', 'jungle', 'savanna', 'mesa'] },
             size: { type: 'object', properties: { x: { type: 'number' }, z: { type: 'number' } } },
             heightVariation: { type: 'string', enum: ['flat', 'gentle', 'hilly', 'mountainous'] },
             water: { type: 'boolean' },
@@ -384,6 +386,75 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'array',
           description: 'Array of asset generation specs (max 5, see generate_asset)',
           items: { type: 'object' },
+        },
+      },
+    },
+  },
+  {
+    name: 'sculpt_terrain',
+    category: 'write',
+    description: [
+      'Sculpt terrain with voxel-level precision.',
+      'Supports fill, subtract, smooth, replace_material, and paint operations.',
+      'Shapes: block, ball, cylinder, wedge.',
+      '',
+      'Operations:',
+      '  fill — add terrain with a material',
+      '  subtract — carve/remove terrain (caves, tunnels)',
+      '  smooth — average occupancy for smoother surfaces',
+      '  replace_material — swap one material for another in a region',
+      '  paint — change surface material without altering shape',
+      '',
+      'Examples:',
+      '  {"operation": "fill", "shape": "ball", "position": {"x": 0, "y": 10, "z": 0}, "size": {"x": 40, "y": 40, "z": 40}, "material": "Rock"}',
+      '  {"operation": "subtract", "shape": "cylinder", "position": {"x": 0, "y": 0, "z": 0}, "size": {"x": 10, "y": 30, "z": 10}}',
+      '  {"operation": "smooth", "position": {"x": 0, "y": 5, "z": 0}, "size": {"x": 64, "y": 32, "z": 64}, "strength": 0.8}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      required: ['operation', 'position', 'size'],
+      properties: {
+        operation: {
+          type: 'string',
+          enum: ['fill', 'subtract', 'smooth', 'replace_material', 'paint'],
+          description: 'Sculpt operation to perform',
+        },
+        shape: {
+          type: 'string',
+          enum: ['block', 'ball', 'cylinder', 'wedge'],
+          description: 'Shape of the sculpt region (default: ball)',
+        },
+        position: {
+          type: 'object',
+          description: 'Center position of the sculpt operation',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+          required: ['x', 'y', 'z'],
+        },
+        size: {
+          type: 'object',
+          description: 'Size of the sculpt region in studs (clamped 4-512)',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+          required: ['x', 'y', 'z'],
+        },
+        material: {
+          type: 'string',
+          description: 'Target material for fill/paint/replace operations',
+        },
+        sourceMaterial: {
+          type: 'string',
+          description: 'Source material for replace_material operation',
+        },
+        strength: {
+          type: 'number',
+          description: 'Smoothing strength 0-1 (default: 0.5, for smooth operation)',
         },
       },
     },

@@ -9,6 +9,7 @@
     "snapshot_scene",
     "clear_environment",
     "compose_scene",
+    "sculpt_terrain",
     "get_file_tree",
     "search_files",
     "get_place_info",
