@@ -170,16 +170,26 @@ export class RobloxStudioMCPServer {
       if (bridgeMode === 'primary' && primaryApp) {
         const pluginConnected = (primaryApp as any).isPluginConnected();
         const mcpActive = (primaryApp as any).isMCPServerActive();
+        const instances = this.bridge.getInstances();
+        const pending = this.bridge.getPendingRequestCount();
+        const now = new Date().toISOString().slice(11, 19);
 
         if (pluginConnected && mcpActive) {
-          // All good
+          console.error(`[${now}] OK | plugin: connected (${instances.length} instance${instances.length !== 1 ? 's' : ''}) | mcp: active | pending: ${pending}`);
         } else if (pluginConnected && !mcpActive) {
-          console.error('Studio plugin connected, but MCP server inactive');
+          console.error(`[${now}] WARN | plugin: connected | mcp: INACTIVE | pending: ${pending}`);
         } else if (!pluginConnected && mcpActive) {
-          console.error('MCP server active, waiting for Studio plugin...');
+          console.error(`[${now}] WARN | plugin: DISCONNECTED | mcp: active | pending: ${pending}`);
         } else {
-          console.error('Waiting for connections...');
+          console.error(`[${now}] WARN | plugin: DISCONNECTED | mcp: INACTIVE | pending: ${pending}`);
         }
+
+        for (const inst of instances) {
+          const age = Math.round((Date.now() - inst.lastActivity) / 1000);
+          console.error(`       └─ ${inst.role} [${inst.instanceId.slice(0, 8)}] last_seen: ${age}s ago${inst.pluginVersion ? ` v${inst.pluginVersion}` : ''} caps: [${inst.capabilities.join(',')}]`);
+        }
+      } else if (bridgeMode === 'proxy') {
+        console.error(`[${new Date().toISOString().slice(11, 19)}] PROXY mode — forwarding to primary on port ${basePort}`);
       }
     }, 5000);
 
