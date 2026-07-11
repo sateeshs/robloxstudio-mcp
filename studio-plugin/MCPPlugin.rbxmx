@@ -56,6 +56,7 @@ local BuildHandlers = TS.import(script, script.Parent, "handlers", "BuildHandler
 local AssetHandlers = TS.import(script, script.Parent, "handlers", "AssetHandlers")
 local CaptureHandlers = TS.import(script, script.Parent, "handlers", "CaptureHandlers")
 local InputHandlers = TS.import(script, script.Parent, "handlers", "InputHandlers")
+local EnvironmentHandlers = TS.import(script, script.Parent, "handlers", "EnvironmentHandlers")
 local instanceId = HttpService:GenerateGUID(false)
 local assignedRole
 local function detectRole()
@@ -124,6 +125,7 @@ local routeMap = {
 	["/api/simulate-mouse-input"] = InputHandlers.simulateMouseInput,
 	["/api/simulate-keyboard-input"] = InputHandlers.simulateKeyboardInput,
 	["/api/find-and-replace-in-scripts"] = ScriptHandlers.findAndReplaceInScripts,
+	["/api/execute-template"] = EnvironmentHandlers.executeTemplate,
 }
 local function processRequest(request)
 	local endpoint = request.endpoint
@@ -372,6 +374,8 @@ local function activatePlugin(connIndex)
 					role = detectRole(),
 					pluginReady = true,
 					timestamp = tick(),
+					pluginVersion = State.CURRENT_VERSION,
+					capabilities = State.PLUGIN_CAPABILITIES,
 				}),
 			})
 		end)
@@ -1498,6 +1502,107 @@ return {
         </Item>
         <Item class="ModuleScript" referent="7">
           <Properties>
+            <string name="Name">EnvironmentHandlers</string>
+            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+--[[
+	*
+	 * EnvironmentHandlers — Execute pre-rendered Luau templates from environment tools.
+	 *
+	 * Unlike executeLuau (which runs arbitrary code), this endpoint is designed for
+	 * server-rendered templates with opId markers for output capture and tagging.
+	 
+]]
+local function executeTemplate(requestData)
+	local luauSource = requestData.luauSource
+	local opId = requestData.opId
+	if not (luauSource ~= "" and luauSource) or luauSource == "" then
+		return {
+			ok = false,
+			error = "luauSource is required",
+		}
+	end
+	if not (opId ~= "" and opId) or opId == "" then
+		return {
+			ok = false,
+			error = "opId is required",
+		}
+	end
+	local output = {}
+	local oldPrint = print
+	local oldWarn = warn
+	-- Capture output scoped to this operation via ENVTOOLS markers
+	local env = getfenv(0)
+	env.print = function(...)
+		local args = { ... }
+		local parts = {}
+		for _, a in args do
+			local _arg0 = tostring(a)
+			table.insert(parts, _arg0)
+		end
+		local line = table.concat(parts, "\t")
+		table.insert(output, line)
+		oldPrint(unpack(args))
+	end
+	env.warn = function(...)
+		local args = { ... }
+		local parts = {}
+		for _, a in args do
+			local _arg0 = tostring(a)
+			table.insert(parts, _arg0)
+		end
+		local line = `[warn] {table.concat(parts, "\t")}`
+		table.insert(output, line)
+		oldWarn(unpack(args))
+	end
+	local success, result = pcall(function()
+		local fn, compileError = loadstring(luauSource)
+		if not fn then
+			error(`Compile error: {compileError}`)
+		end
+		return fn()
+	end)
+	env.print = oldPrint
+	env.warn = oldWarn
+	if success then
+		-- Template returns {ok, error?} table
+		local returnTable = result
+		local _object = {}
+		local _left = "ok"
+		local _result = returnTable
+		if _result ~= nil then
+			_result = _result.ok
+		end
+		local _condition = _result
+		if _condition == nil then
+			_condition = true
+		end
+		_object[_left] = _condition
+		local _left_1 = "error"
+		local _result_1 = returnTable
+		if _result_1 ~= nil then
+			_result_1 = _result_1.error
+		end
+		_object[_left_1] = _result_1
+		_object.output = output
+		_object.opId = opId
+		return _object
+	else
+		return {
+			ok = false,
+			error = tostring(result),
+			output = output,
+			opId = opId,
+		}
+	end
+end
+return {
+	executeTemplate = executeTemplate,
+}
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="8">
+          <Properties>
             <string name="Name">InputHandlers</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local function getVIM()
@@ -1650,7 +1755,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="8">
+        <Item class="ModuleScript" referent="9">
           <Properties>
             <string name="Name">InstanceHandlers</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -2157,7 +2262,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="9">
+        <Item class="ModuleScript" referent="10">
           <Properties>
             <string name="Name">MetadataHandlers</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -2740,7 +2845,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="10">
+        <Item class="ModuleScript" referent="11">
           <Properties>
             <string name="Name">PropertyHandlers</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -2992,7 +3097,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="11">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">QueryHandlers</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -3002,6 +3107,7 @@ local _binding = Utils
 local getInstancePath = _binding.getInstancePath
 local getInstanceByPath = _binding.getInstanceByPath
 local readScriptSource = _binding.readScriptSource
+local forEachDescendant = _binding.forEachDescendant
 local function getFileTree(requestData)
 	local _condition = (requestData.path)
 	if _condition == nil then
@@ -3060,7 +3166,7 @@ local function searchFiles(requestData)
 		}
 	end
 	local results = {}
-	local function searchRecursive(instance)
+	forEachDescendant(game, function(instance)
 		local match = false
 		if searchType == "name" then
 			local _exp = string.lower(instance.Name)
@@ -3087,11 +3193,7 @@ local function searchFiles(requestData)
 			end
 			table.insert(results, entry)
 		end
-		for _, child in instance:GetChildren() do
-			searchRecursive(child)
-		end
-	end
-	searchRecursive(game)
+	end)
 	return {
 		results = results,
 		query = query,
@@ -3167,7 +3269,7 @@ local function searchObjects(requestData)
 		}
 	end
 	local results = {}
-	local function searchRecursive(instance)
+	forEachDescendant(game, function(instance)
 		local match = false
 		if searchType == "name" then
 			local _exp = string.lower(instance.Name)
@@ -3198,11 +3300,7 @@ local function searchObjects(requestData)
 			}
 			table.insert(results, _arg0)
 		end
-		for _, child in instance:GetChildren() do
-			searchRecursive(child)
-		end
-	end
-	searchRecursive(game)
+	end)
 	return {
 		results = results,
 		query = query,
@@ -3373,7 +3471,7 @@ local function searchByProperty(requestData)
 		}
 	end
 	local results = {}
-	local function searchRecursive(instance)
+	forEachDescendant(game, function(instance)
 		local success, value = pcall(function()
 			return tostring(instance[propertyName])
 		end)
@@ -3392,11 +3490,7 @@ local function searchByProperty(requestData)
 			}
 			table.insert(results, _arg0)
 		end
-		for _, child in instance:GetChildren() do
-			searchRecursive(child)
-		end
-	end
-	searchRecursive(game)
+	end)
 	return {
 		propertyName = propertyName,
 		propertyValue = propertyValue,
@@ -4019,7 +4113,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="12">
+        <Item class="ModuleScript" referent="13">
           <Properties>
             <string name="Name">ScriptHandlers</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -4715,7 +4809,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="13">
+        <Item class="ModuleScript" referent="14">
           <Properties>
             <string name="Name">TestHandlers</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -5030,7 +5124,7 @@ return {
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="15">
         <Properties>
           <string name="Name">Recording</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -5060,11 +5154,12 @@ return {
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="15">
+      <Item class="ModuleScript" referent="16">
         <Properties>
           <string name="Name">State</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local CURRENT_VERSION = "2.7.0"
+local PLUGIN_CAPABILITIES = { "executeTemplate", "generateModel" }
 local MAX_CONNECTIONS = 5
 local BASE_PORT = 58741
 local activeTabIndex = 0
@@ -5142,6 +5237,7 @@ local function getConnections()
 end
 return {
 	CURRENT_VERSION = CURRENT_VERSION,
+	PLUGIN_CAPABILITIES = PLUGIN_CAPABILITIES,
 	MAX_CONNECTIONS = MAX_CONNECTIONS,
 	BASE_PORT = BASE_PORT,
 	connections = connections,
@@ -5156,7 +5252,7 @@ return {
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="16">
+      <Item class="ModuleScript" referent="17">
         <Properties>
           <string name="Name">UI</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -5876,7 +5972,7 @@ return {
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="17">
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">Utils</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -6344,6 +6440,12 @@ local function evaluateFormula(formula, variables, instance, index)
 		return index, "Complex formulas not supported - using index value"
 	end
 end
+local function forEachDescendant(root, visit)
+	visit(root)
+	for _, child in root:GetChildren() do
+		forEachDescendant(child, visit)
+	end
+end
 local function compareVersions(v1, v2)
 	local function parseVersion(v)
 		local parts = {}
@@ -6401,16 +6503,17 @@ return {
 	convertPropertyValue = convertPropertyValue,
 	evaluateFormula = evaluateFormula,
 	compareVersions = compareVersions,
+	forEachDescendant = forEachDescendant,
 }
 ]]></string>
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="21">
+    <Item class="Folder" referent="22">
       <Properties>
         <string name="Name">include</string>
       </Properties>
-      <Item class="ModuleScript" referent="18">
+      <Item class="ModuleScript" referent="19">
         <Properties>
           <string name="Name">Promise</string>
           <string name="Source"><![CDATA[--[[
@@ -8484,7 +8587,7 @@ return Promise
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="19">
+      <Item class="ModuleScript" referent="20">
         <Properties>
           <string name="Name">RuntimeLib</string>
           <string name="Source"><![CDATA[local Promise = require(script.Parent.Promise)
@@ -8751,15 +8854,15 @@ return TS
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="22">
+    <Item class="Folder" referent="23">
       <Properties>
         <string name="Name">node_modules</string>
       </Properties>
-      <Item class="Folder" referent="23">
+      <Item class="Folder" referent="24">
         <Properties>
           <string name="Name">@rbxts</string>
         </Properties>
-      <Item class="ModuleScript" referent="20">
+      <Item class="ModuleScript" referent="21">
         <Properties>
           <string name="Name">services</string>
           <string name="Source"><![CDATA[return setmetatable({}, {
