@@ -5,12 +5,8 @@
       "args": ["--stdio"]
     },
     "envtools-dev": {
-      "command": "node",
-      "args": ["./packages/robloxstudio-mcp/dist/index.js", "--stdio", "--profile", "dev"]
-    },
-    "envtools-kid": {
-      "command": "node",
-      "args": ["./packages/robloxstudio-mcp/dist/index.js", "--stdio", "--profile", "kid"]
+      "type": "url",
+      "url": "http://10.0.0.12:58741/mcp"
     }
   }
 }
