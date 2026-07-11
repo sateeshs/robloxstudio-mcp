@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "roblox-studio-official": {
+      "command": "rbx-studio-mcp",
+      "args": ["--stdio"]
+    },
+    "envtools-dev": {
+      "command": "node",
+      "args": ["./packages/robloxstudio-mcp/dist/index.js", "--stdio", "--profile", "dev"]
+    },
+    "envtools-kid": {
+      "command": "node",
+      "args": ["./packages/robloxstudio-mcp/dist/index.js", "--stdio", "--profile", "kid"]
+    }
+  }
+}
