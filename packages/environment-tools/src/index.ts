@@ -21,7 +21,9 @@ export { validateMaterialColorSpec, MaterialColorSpecSchema } from './schema/mat
 export { prepareConfigureWater } from './tools/configureWater.js';
 export { prepareSetMaterialColors } from './tools/setMaterialColors.js';
 export { prepareAddEffect } from './tools/addEffect.js';
+export { prepareBuildCity } from './tools/buildCity.js';
 export { validateEffectSpec, EffectSpecSchema } from './schema/effectSpec.js';
+export { validateCitySpec, CitySpecSchema } from './schema/citySpec.js';
 export { ClearSpecSchema } from './schema/clearSpec.js';
 export { renderTemplate, renderTemplateString, sanitizeString, formatValue, setTemplatesDir } from './luau/render.js';
 
@@ -629,6 +631,89 @@ export const ENV_TOOL_DEFINITIONS: ToolDefinition[] = [
         name: {
           type: 'string',
           description: 'Custom name for the effect instance',
+        },
+      },
+    },
+  },
+  {
+    name: 'build_city',
+    category: 'write',
+    description: [
+      'Build a procedural city layout with street grids, buildings, sidewalks, and urban infrastructure.',
+      'Generates a complete city block grid with roads, buildings of various types, street lights,',
+      'street trees, parks, and ambient bird sounds.',
+      '',
+      'Styles: modern (glass/concrete), medieval (brick/cobblestone), futuristic (neon/glass).',
+      'Building types: house, shop, apartment, office, skyscraper, park.',
+      '',
+      'Examples:',
+      '  {"gridSize": 3, "style": "modern"}',
+      '  {"gridSize": 4, "blockSize": 150, "style": "medieval", "buildings": ["house", "shop"]}',
+      '  {"gridSize": 2, "style": "futuristic", "streetTrees": false, "ambientLife": true}',
+      '  {"gridSize": 5, "streetWidth": 30, "buildings": ["skyscraper", "office"], "position": {"x": 0, "y": 0, "z": 0}, "seed": 42}',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        layout: {
+          type: 'string',
+          enum: ['grid'],
+          description: 'City layout type (default: grid)',
+        },
+        gridSize: {
+          type: 'number',
+          description: 'NxN grid of city blocks (clamped 1-6, default: 3)',
+        },
+        blockSize: {
+          type: 'number',
+          description: 'Size of each city block in studs (clamped 60-200, default: 120)',
+        },
+        streetWidth: {
+          type: 'number',
+          description: 'Width of streets in studs (clamped 12-40, default: 24)',
+        },
+        buildings: {
+          type: 'array',
+          items: { type: 'string', enum: ['house', 'shop', 'apartment', 'office', 'skyscraper', 'park'] },
+          description: 'Building types to place randomly (default: all types)',
+        },
+        style: {
+          type: 'string',
+          enum: ['modern', 'medieval', 'futuristic'],
+          description: 'Architectural style (default: modern)',
+        },
+        sidewalks: {
+          type: 'boolean',
+          description: 'Add sidewalks along blocks (default: true)',
+        },
+        streetLights: {
+          type: 'boolean',
+          description: 'Add street lights at intersections (default: true)',
+        },
+        streetTrees: {
+          type: 'boolean',
+          description: 'Add trees along streets (default: true)',
+        },
+        parks: {
+          type: 'boolean',
+          description: 'Convert some blocks to parks with trees and benches (default: true)',
+        },
+        ambientLife: {
+          type: 'boolean',
+          description: 'Add bird sounds on tall buildings (default: true)',
+        },
+        position: {
+          type: 'object',
+          description: 'World position center (default: origin)',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            z: { type: 'number' },
+          },
+        },
+        seed: {
+          type: 'number',
+          description: 'Random seed for reproducibility',
         },
       },
     },

@@ -13,6 +13,7 @@
     "configure_water",
     "set_material_colors",
     "add_effect",
+    "build_city",
     "get_file_tree",
     "search_files",
     "get_place_info",
